@@ -1659,8 +1659,11 @@ el('btn-restore').addEventListener('click', function () {
   renderRosterErrors([]);
 });
 
-/* Boot: load the default field so the app works immediately. */
+/* Boot: load the default field and generate its schedule right away,
+   so the page opens fully populated with the verification panel and
+   mathematics live, one press of Start away from a tournament. */
 el('roster-input').value = DEFAULT_ROSTER;
+handleGenerate();
 </script>
 </body>
 </html>
