@@ -47,8 +47,8 @@ function makeLcg(seed) {
 }
 
 /* ---- Circle method: structural properties for every field size ---- */
-console.log('Circle method (N = 4..16)');
-for (let N = 4; N <= 16; N++) {
+console.log('Circle method (N = 4..30)');
+for (let N = 4; N <= 30; N++) {
   const s = algo.buildSchedule(N);
   const expectedRounds = N % 2 === 1 ? N : N - 1;
   assertEqual(s.rounds.length, expectedRounds, 'N=' + N + ' round count');
