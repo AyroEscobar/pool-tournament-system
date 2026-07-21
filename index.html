@@ -193,6 +193,19 @@ td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: none; }
 .num { text-align: right; }
 
+/* Roster card */
+.row-buttons { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 13px; }
+.errors {
+  margin-top: 11px;
+  padding: 10px 13px;
+  background: rgba(229, 118, 92, 0.08);
+  border: 1px solid rgba(229, 118, 92, 0.4);
+  border-radius: 8px;
+  color: var(--fail-ink);
+  font: 400 12px/1.7 var(--mono);
+}
+.errors div::before { content: '\2717\00a0\00a0'; }
+
 /* Status chips */
 .chip {
   display: inline-flex;
@@ -236,7 +249,18 @@ footer {
 
   <div class="layout">
     <aside class="sidebar" id="sidebar">
-      <!-- Roster, controls, and verification cards -->
+
+      <section class="card">
+        <h2 class="card-title">Field of Players</h2>
+        <textarea id="roster-input" rows="10" spellcheck="false" autocomplete="off" aria-label="Player roster, one player per line as name comma Elo rating"></textarea>
+        <p class="hint">One player per line as <strong>Name, Elo</strong>. Any count from 4 to 16 works. A name without a rating starts at 1500. Odd counts get a rotating bye.</p>
+        <div class="errors" id="roster-errors" hidden></div>
+        <div class="row-buttons">
+          <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
+          <button class="btn-quiet" id="btn-restore" type="button">restore default field</button>
+        </div>
+      </section>
+
     </aside>
     <div class="maincol" id="maincol">
       <!-- Standings, schedule, and bracket sections -->
@@ -274,13 +298,88 @@ footer {
    SECTION 2: ROSTER PARSING
    ---------------------------------------------------------------- */
 
+const DEFAULT_ROSTER = [
+  'Ayro, 1450',
+  'Marcus, 1685',
+  'Jade, 1612',
+  'Tobias, 1554',
+  'Priya, 1497',
+  'Devon, 1408',
+  'Sofia, 1333',
+  'Kenji, 1240'
+].join('\n');
+
+/* Turns the textarea contents into a validated player list.
+   Accepts "Name, 1450" or a bare "Name" (defaults to Elo 1500).
+   Returns { players: [{name, elo}], errors: [string] }; the roster
+   is usable only when errors is empty. */
+function parseRoster(text) {
+  const players = [];
+  const errors = [];
+  const seen = new Set();
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const commaAt = line.indexOf(',');
+    const name = commaAt === -1 ? line : line.slice(0, commaAt).trim();
+    const ratingText = commaAt === -1 ? '' : line.slice(commaAt + 1).trim();
+    if (!name) { errors.push('Line ' + (i + 1) + ': missing a name.'); continue; }
+    if (name.length > 24) { errors.push('Line ' + (i + 1) + ': name is longer than 24 characters.'); continue; }
+    let elo = 1500;
+    if (ratingText !== '') {
+      if (!/^\d+$/.test(ratingText)) {
+        errors.push('Line ' + (i + 1) + ': rating "' + ratingText + '" is not a whole number.');
+        continue;
+      }
+      elo = parseInt(ratingText, 10);
+      if (elo < 100 || elo > 2900) {
+        errors.push('Line ' + (i + 1) + ': rating should be between 100 and 2900.');
+        continue;
+      }
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) { errors.push('Line ' + (i + 1) + ': duplicate player "' + name + '".'); continue; }
+    seen.add(key);
+    players.push({ name: name, elo: elo });
+  }
+  if (players.length < 4) errors.push('Need at least 4 players, found ' + players.length + '.');
+  if (players.length > 16) errors.push('Supports at most 16 players, found ' + players.length + '.');
+  return { players: players, errors: errors };
+}
+
 /* ----------------------------------------------------------------
    SECTION 3: APP STATE
+   All state lives in plain variables in memory. The target
+   environment has no localStorage or sessionStorage, and none is
+   needed: regenerating from the textarea rebuilds everything.
    ---------------------------------------------------------------- */
+
+const state = {
+  players: [],      // [{id, name, elo, startElo, wins, losses, played}]
+  schedule: null,   // output of buildSchedule
+  bracket: null,    // built after the group stage completes
+  phase: 'setup'    // setup | ready | group | seeding | bracket | done
+};
+
+function el(id) { return document.getElementById(id); }
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
 
 /* ----------------------------------------------------------------
    SECTION 4: RENDERING
    ---------------------------------------------------------------- */
+
+function renderRosterErrors(errors) {
+  const box = el('roster-errors');
+  if (!errors.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = errors.map(function (e) { return '<div>' + escapeHtml(e) + '</div>'; }).join('');
+}
 
 /* ----------------------------------------------------------------
    SECTION 5: SIMULATION LOOP
@@ -289,6 +388,28 @@ footer {
 /* ----------------------------------------------------------------
    SECTION 6: EVENT WIRING
    ---------------------------------------------------------------- */
+
+/* Parses the roster and, when valid, rebuilds the whole tournament
+   from scratch: fresh player records, a new schedule, and reset
+   panels. Later sections extend this function's work. */
+function handleGenerate() {
+  const parsed = parseRoster(el('roster-input').value);
+  renderRosterErrors(parsed.errors);
+  if (parsed.errors.length) return;
+  state.players = parsed.players.map(function (p, id) {
+    return { id: id, name: p.name, elo: p.elo, startElo: p.elo, wins: 0, losses: 0, played: 0 };
+  });
+  state.phase = 'ready';
+}
+
+el('btn-generate').addEventListener('click', handleGenerate);
+el('btn-restore').addEventListener('click', function () {
+  el('roster-input').value = DEFAULT_ROSTER;
+  renderRosterErrors([]);
+});
+
+/* Boot: load the default field so the app works immediately. */
+el('roster-input').value = DEFAULT_ROSTER;
 </script>
 </body>
 </html>
