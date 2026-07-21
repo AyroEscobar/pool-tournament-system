@@ -417,7 +417,21 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .diagram-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 12px; }
 .diagram-controls .btn { padding: 6px 13px; font-size: 14px; }
 .diagram-label { font: 600 12px/1 var(--mono); letter-spacing: 0.06em; color: var(--ink-dim); min-width: 110px; text-align: center; }
-.seat-order { font-family: var(--mono); text-align: center; margin: -4px 0 12px; line-height: 1.7; }
+.seat-order { font-family: var(--mono); text-align: center; margin: 0 0 12px; line-height: 1.7; }
+.coverage-line { font-family: var(--mono); text-align: center; margin: -4px 0 6px; }
+.coverage-line strong { color: var(--yellow); font-weight: 600; }
+.coverage-line.complete, .coverage-line.complete strong { color: var(--pass-ink); }
+
+/* The diagram's felt table bed and its chalk marks */
+.table-bed { fill: var(--felt); stroke: var(--felt-deep); stroke-width: 3; }
+.k-edge { stroke: #F1EDE0; stroke-width: 1; }
+.chord { stroke: #E8C766; stroke-width: 2.2; stroke-linecap: round; }
+.chord-bye { stroke: #9AA69C; stroke-width: 2; stroke-dasharray: 5 5; stroke-linecap: butt; }
+@keyframes chalkdraw { to { stroke-dashoffset: 0; } }
+@keyframes chalkfade { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chord, .chord-bye { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+}
 
 /* Footer */
 footer {
@@ -568,12 +582,15 @@ footer {
           <button class="btn" id="btn-diagram-prev" type="button" aria-label="Previous round">&#8249;</button>
           <span class="diagram-label" id="diagram-round-label"></span>
           <button class="btn" id="btn-diagram-next" type="button" aria-label="Next round">&#8250;</button>
+          <button class="btn" id="btn-diagram-play" type="button">Play</button>
         </div>
+        <p class="fine coverage-line" id="coverage-line"></p>
         <p class="fine seat-order" id="seat-order"></p>
-        <p class="fine">The seat with the ring never moves; everyone else rotates one seat per round. Opposite
-        seats play, so each round draws parallel chords: a perfect matching. Faint lines are all the edges of
-        K<sub>n</sub>; stepping through the rounds, the bold chords cover each edge exactly once. A dashed chord
-        marks the bye seat when the field is odd.</p>
+        <p class="fine">Vertices are the players, fixed in place, with the ringed vertex the fixed seat of the
+        rotation (and a phantom vertex for the bye when the field is odd). Bold chalk chords are this round's
+        matches: no two share a vertex, a perfect matching. Step or play the rounds and the pattern sweeps
+        around the table, leaving already played edges as chalk residue, until every edge of K<sub>n</sub> has
+        been drawn exactly once. A dashed chord is a bye.</p>
       </div>
 
       <div class="card math-card">
@@ -1075,6 +1092,9 @@ const state = {
 
 function el(id) { return document.getElementById(id); }
 
+/* Honors the OS motion preference: animations become instant. */
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, function (ch) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
@@ -1289,11 +1309,24 @@ function renderMathPanel() {
     ', the strongest against the weakest, and seeds 1 and 2 sit in opposite halves, so the earliest they can meet is the final. That protection is the reward for winning the group.';
 }
 
-/* K_n matching diagram. Seats sit on a circle; the ringed seat is
-   the fixed one. Faint lines draw every edge of K_n, bold chalk
-   chords draw this round's matching, and a dashed chord marks the
-   bye pairing when the field is odd. */
-function seatPoint(i, seats, radius) {
+/* K_n MATCHING DIAGRAM, drawn on a felt table bed.
+
+   Vertices are the PLAYERS at fixed positions (plus one phantom
+   vertex for the bye when the field is odd), so the edges of K_n
+   have fixed geometry. Each round lights its matching up as chalk
+   chords drawn stroke by stroke; edges played in earlier rounds
+   remain as faint chalk residue. Stepping or playing the rounds
+   therefore shows the one-factorization doing its work: the chord
+   pattern sweeps around the table and the residue accumulates until
+   every edge of K_n has been drawn exactly once, counted live. */
+const diagram = { built: false, seats: 0, positions: [], faint: 0.06, edgeEls: null, playing: false, playTimer: null };
+
+function edgeKey(i, j) { return i < j ? i + ':' + j : j + ':' + i; }
+
+/* Vertex index of the phantom bye seat (only meaningful with a bye). */
+function byeVertexIndex() { return state.schedule.playerCount; }
+
+function vertexPos(i, seats, radius) {
   const angle = -Math.PI / 2 + (i * 2 * Math.PI) / seats;
   return {
     x: 210 + radius * Math.cos(angle),
@@ -1303,68 +1336,179 @@ function seatPoint(i, seats, radius) {
   };
 }
 
-function renderDiagram() {
+/* The edge each schedule entry occupies in K_n (byes are edges to
+   the phantom vertex). */
+function roundEdgeKeys(round) {
+  return round.map(function (m) {
+    return m.bye !== undefined ? edgeKey(m.bye, byeVertexIndex()) : edgeKey(m.a, m.b);
+  });
+}
+
+/* Builds the static scene once per generate: felt bed, all edges of
+   K_n, and the fixed vertex dots and labels. Label size, dot size,
+   and base edge opacity scale down as the field grows so thirty
+   players still read cleanly; labels alternate between two radii to
+   avoid collisions on large fields. */
+function buildDiagram() {
   const s = state.schedule;
   const seats = s.seatCount;
-  const r = state.diagramRound;
-  const seatedIds = s.arrangements[r];
-  const R = 122;
+  const big = seats >= 18;
+  diagram.seats = seats;
+  diagram.positions = [];
+  diagram.faint = seats > 20 ? 0.03 : seats > 12 ? 0.045 : 0.06;
+  const R = big ? 118 : 122;
+  for (let i = 0; i < seats; i++) diagram.positions.push(vertexPos(i, seats, R));
+
   const parts = [];
+  parts.push('<rect class="table-bed" x="10" y="6" width="400" height="388" rx="26"/>');
 
   for (let i = 0; i < seats; i++) {
     for (let j = i + 1; j < seats; j++) {
-      const p = seatPoint(i, seats, R);
-      const q = seatPoint(j, seats, R);
-      parts.push('<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) +
-        '" y2="' + q.y.toFixed(1) + '" stroke="#F1EDE0" stroke-opacity="0.055" stroke-width="1"/>');
+      const p = diagram.positions[i];
+      const q = diagram.positions[j];
+      parts.push('<line class="k-edge" data-key="' + i + ':' + j + '" x1="' + p.x.toFixed(1) + '" y1="' +
+        p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '"/>');
     }
   }
+  parts.push('<g id="chord-layer"></g>');
 
-  for (let i = 0; i < seats / 2; i++) {
-    const j = seats - 1 - i;
-    const p = seatPoint(i, seats, R);
-    const q = seatPoint(j, seats, R);
-    const isBye = seatedIds[i] === BYE || seatedIds[j] === BYE;
-    parts.push('<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) +
-      '" y2="' + q.y.toFixed(1) + '" stroke="' + (isBye ? '#7E9A8B' : '#E8C766') +
-      '" stroke-width="2.2" stroke-linecap="round"' + (isBye ? ' stroke-dasharray="5 5"' : '') + '/>');
-  }
-
-  for (let i = 0; i < seats; i++) {
-    const p = seatPoint(i, seats, R);
-    const occupant = seatedIds[i];
-    const isBye = occupant === BYE;
-    parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4.2" fill="' +
-      (isBye ? '#7E9A8B' : '#F1EDE0') + '"/>');
-    if (i === 0) {
+  const dotR = big ? 3.4 : 4.2;
+  const fontSize = big ? 9.5 : 11.5;
+  const maxLen = big ? 7 : 12;
+  for (let v = 0; v < seats; v++) {
+    const p = diagram.positions[v];
+    const isBye = s.hasBye && v === byeVertexIndex();
+    parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + dotR + '" fill="' +
+      (isBye ? '#9AA69C' : '#F1EDE0') + '"/>');
+    if (v === 0) {
       parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) +
-        '" r="8.6" fill="none" stroke="#E8C766" stroke-width="1.5"/>');
+        '" r="' + (dotR + 4.4) + '" fill="none" stroke="#E8C766" stroke-width="1.5"/>');
     }
-    const lp = seatPoint(i, seats, R + 25);
+    const labelRadius = R + 22 + (big ? (v % 2) * 15 : 0);
+    const lp = vertexPos(v, seats, labelRadius);
     let anchor = 'middle';
     if (lp.cos > 0.35) anchor = 'start';
     else if (lp.cos < -0.35) anchor = 'end';
-    let label = isBye ? 'bye' : playerName(occupant);
-    const maxLen = seats > 10 ? 8 : 12;
+    let label = isBye ? 'bye' : playerName(v);
     if (label.length > maxLen) label = label.slice(0, maxLen - 1) + '…';
-    parts.push('<text x="' + lp.x.toFixed(1) + '" y="' + (lp.y + 4).toFixed(1) + '" text-anchor="' + anchor +
-      '" font-family="IBM Plex Mono, Menlo, monospace" font-size="11.5" fill="' +
-      (isBye ? '#7E9A8B' : '#AFC5B6') + '"' + (isBye ? ' font-style="italic"' : '') + '>' +
+    parts.push('<text x="' + lp.x.toFixed(1) + '" y="' + (lp.y + 3.5).toFixed(1) + '" text-anchor="' + anchor +
+      '" font-family="IBM Plex Mono, Menlo, monospace" font-size="' + fontSize + '" fill="' +
+      (isBye ? '#9AA69C' : '#B6BFB4') + '"' + (isBye ? ' font-style="italic"' : '') + '>' +
       escapeHtml(label) + '</text>');
   }
 
   el('kn-diagram').innerHTML = parts.join('');
+  diagram.edgeEls = {};
+  const lines = el('kn-diagram').querySelectorAll('.k-edge');
+  for (const line of lines) diagram.edgeEls[line.dataset.key] = line;
+  diagram.built = true;
+}
+
+/* Shows round r: residue for rounds before it, chalk chords for its
+   own matching (drawn in with a stagger when animating), and the
+   live edge count. */
+function showDiagramRound(r, animate) {
+  if (!diagram.built) return;
+  const s = state.schedule;
+  state.diagramRound = r;
+
+  const covered = new Set();
+  for (let k = 0; k < r; k++) {
+    for (const key of roundEdgeKeys(s.rounds[k])) covered.add(key);
+  }
+  for (const key in diagram.edgeEls) {
+    const line = diagram.edgeEls[key];
+    if (covered.has(key)) {
+      line.style.stroke = '#E8C766';
+      line.style.strokeOpacity = 0.16;
+    } else {
+      line.style.stroke = '#F1EDE0';
+      line.style.strokeOpacity = diagram.faint;
+    }
+  }
+
+  const animating = animate && !REDUCED_MOTION;
+  const chords = [];
+  let n = 0;
+  for (const m of s.rounds[r]) {
+    const isBye = m.bye !== undefined;
+    const va = isBye ? m.bye : m.a;
+    const vb = isBye ? byeVertexIndex() : m.b;
+    const p = diagram.positions[va];
+    const q = diagram.positions[vb];
+    let style = '';
+    if (animating) {
+      if (isBye) {
+        style = 'opacity:0;animation:chalkfade 0.4s ease-out forwards;animation-delay:' + (n * 60) + 'ms;';
+      } else {
+        const len = Math.hypot(q.x - p.x, q.y - p.y).toFixed(1);
+        style = 'stroke-dasharray:' + len + ';stroke-dashoffset:' + len +
+          ';animation:chalkdraw 0.5s ease-out forwards;animation-delay:' + (n * 60) + 'ms;';
+      }
+    }
+    chords.push('<line class="' + (isBye ? 'chord-bye' : 'chord') + '" x1="' + p.x.toFixed(1) + '" y1="' +
+      p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '"' +
+      (style ? ' style="' + style + '"' : '') + '/>');
+    n++;
+  }
+  el('chord-layer').innerHTML = chords.join('');
+
+  const totalEdges = diagram.seats * (diagram.seats - 1) / 2;
+  const after = covered.size + s.rounds[r].length;
+  const cov = el('coverage-line');
+  if (r === s.rounds.length - 1) {
+    cov.innerHTML = 'All <strong>' + totalEdges + '</strong> edges of K<sub>' + diagram.seats +
+      '</sub> drawn exactly once ✓';
+    cov.classList.add('complete');
+  } else {
+    cov.innerHTML = 'After round ' + (r + 1) + ': <strong>' + after + '</strong> of ' + totalEdges +
+      ' edges of K<sub>' + diagram.seats + '</sub> drawn';
+    cov.classList.remove('complete');
+  }
+
   el('diagram-round-label').textContent = 'Round ' + (r + 1) + ' of ' + s.rounds.length;
   el('btn-diagram-prev').disabled = r === 0;
   el('btn-diagram-next').disabled = r === s.rounds.length - 1;
+  if (!diagram.playing) {
+    el('btn-diagram-play').textContent = r === s.rounds.length - 1 ? 'Replay' : 'Play';
+  }
 
-  /* The seat list in occupancy order, so stepping rounds makes the
-     one-seat rotation visible as text as well as geometry. */
-  const seatNames = seatedIds.map(function (id, seat) {
+  const seatNames = s.arrangements[r].map(function (id, seat) {
     if (id === BYE) return 'bye';
     return seat === 0 ? playerName(id) + ' (fixed)' : playerName(id);
   });
   el('seat-order').textContent = 'Seating: ' + seatNames.join(' · ');
+}
+
+/* Auto-play: advances one round at a time so the sweep and the
+   accumulating residue can be watched hands free. */
+function stopDiagramPlay() {
+  diagram.playing = false;
+  clearTimeout(diagram.playTimer);
+  if (state.schedule) {
+    el('btn-diagram-play').textContent =
+      state.diagramRound === state.schedule.rounds.length - 1 ? 'Replay' : 'Play';
+  }
+}
+
+function diagramPlayStep() {
+  if (!diagram.playing) return;
+  const last = state.schedule.rounds.length - 1;
+  if (state.diagramRound >= last) { stopDiagramPlay(); return; }
+  showDiagramRound(state.diagramRound + 1, true);
+  if (state.diagramRound >= last) { stopDiagramPlay(); return; }
+  diagram.playTimer = setTimeout(diagramPlayStep, REDUCED_MOTION ? 650 : 1150);
+}
+
+function toggleDiagramPlay() {
+  if (!state.schedule) return;
+  if (diagram.playing) { stopDiagramPlay(); return; }
+  diagram.playing = true;
+  el('btn-diagram-play').textContent = 'Pause';
+  if (state.diagramRound >= state.schedule.rounds.length - 1) {
+    showDiagramRound(0, true);
+  }
+  diagram.playTimer = setTimeout(diagramPlayStep, REDUCED_MOTION ? 650 : 1050);
 }
 
 function renderVerification() {
@@ -1711,7 +1855,9 @@ function handleGenerate() {
   renderVerification();
   renderStandings(null);
   renderMathPanel();
-  renderDiagram();
+  stopDiagramPlay();
+  buildDiagram();
+  showDiagramRound(0, false);
   sim.completed = 0;
   sim.totalMatches = totalMatchTarget(state.players.length);
   renderProgress();
@@ -1733,14 +1879,18 @@ el('btn-pause').addEventListener('click', function () {
   updateControls();
 });
 el('btn-diagram-prev').addEventListener('click', function () {
-  if (state.diagramRound > 0) { state.diagramRound--; renderDiagram(); }
+  if (state.diagramRound > 0) {
+    stopDiagramPlay();
+    showDiagramRound(state.diagramRound - 1, true);
+  }
 });
 el('btn-diagram-next').addEventListener('click', function () {
   if (state.schedule && state.diagramRound < state.schedule.rounds.length - 1) {
-    state.diagramRound++;
-    renderDiagram();
+    stopDiagramPlay();
+    showDiagramRound(state.diagramRound + 1, true);
   }
 });
+el('btn-diagram-play').addEventListener('click', toggleDiagramPlay);
 el('speed-seg').addEventListener('click', function (event) {
   const button = event.target.closest('button[data-speed]');
   if (!button) return;
