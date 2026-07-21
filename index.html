@@ -591,7 +591,10 @@ footer {
 
       <div class="card math-card">
         <h3>Elo expectation and update</h3>
+        <div class="eqlabel">Rating update</div>
         <div class="formula">E_A = 1 / (1 + 10^((R_B - R_A) / 400))<br>R_new = R_old + K (S - E),&nbsp;&nbsp;K = 32,&nbsp;&nbsp;S = 1 win, 0 loss</div>
+        <div class="eqlabel">Race calibration</div>
+        <div class="formula" id="race-calibration"></div>
         <p id="elo-example"></p>
         <p class="fine">Every simulated match draws its winner from exactly these odds. The race score model then
         finds the per rack probability whose race outcome matches E, so favorites usually win, upsets stay
@@ -624,6 +627,8 @@ footer {
       <div class="card math-card">
         <h3>Seeding the knockout</h3>
         <p id="seed-explain"></p>
+        <div class="eqlabel">Placement recurrence</div>
+        <div class="formula" id="seed-recurrence"></div>
       </div>
 
       </div>
@@ -1368,14 +1373,26 @@ function renderMathPanel() {
   const A = sorted[0];
   const B = sorted[1];
   const E = eloExpected(A.startElo, B.startElo);
+
+  /* The race model, stated and then solved live for this roster's
+     strongest pairing: q is found by bisection so the match odds
+     equal the Elo expectation exactly, and the round trip is shown
+     as a check. */
+  el('race-calibration').innerHTML =
+    'P(N, q) = Σ<sub>k=0</sub><sup>N-1</sup> C(N-1+k, k) q<sup>N</sup> (1-q)<sup>k</sup><br>' +
+    'solve P(' + RACE_TO_GROUP + ', q) = E<sub>A</sub> by bisection; P is strictly increasing in q';
+
+  const q = rackProbabilityFor(E, RACE_TO_GROUP);
+  const roundTrip = raceWinProbability(q, RACE_TO_GROUP);
   el('elo-example').innerHTML = 'Worked example from this roster: <strong>' + escapeHtml(A.name) + ' (' +
     A.startElo + ')</strong> vs <strong>' + escapeHtml(B.name) + ' (' + B.startElo + ')</strong>. E for ' +
     escapeHtml(A.name) + ' = 1 / (1 + 10^((' + B.startElo + ' - ' + A.startElo + ') / 400)) = ' + E.toFixed(3) +
     '. A win for ' + escapeHtml(A.name) + ' transfers 32 × (1 - ' + E.toFixed(3) + ') = ' +
     (ELO_K * (1 - E)).toFixed(1) + ' points from ' + escapeHtml(B.name) + '; a win for ' + escapeHtml(B.name) +
     ' transfers 32 × ' + E.toFixed(3) + ' = ' + (ELO_K * E).toFixed(1) +
-    ' points the other way. The favorite should take about ' + Math.round(E * 100) +
-    ' of 100 meetings, which leaves real room for upsets.';
+    ' points the other way. Solving the race calibration gives per rack q = ' + q.toFixed(3) +
+    '; check: P(' + RACE_TO_GROUP + ', ' + q.toFixed(3) + ') = ' + roundTrip.toFixed(3) +
+    ', the Elo odds exactly.';
 
   const k = qualifierCount(N);
   const order = seedOrder(k);
@@ -1387,6 +1404,10 @@ function renderMathPanel() {
     ') = [' + order.join(', ') + ']</strong>, read pairwise as ' + pairs.join(', ') +
     '. Every first round pairing sums to ' + (k + 1) +
     ', the strongest against the weakest, and seeds 1 and 2 sit in opposite halves, so the earliest they can meet is the final. That protection is the reward for winning the group.';
+
+  el('seed-recurrence').innerHTML =
+    'S(1) = [1],&nbsp;&nbsp;S(2k) = [ s, 2k+1-s : s ∈ S(k) ]<br>' +
+    '⇒&nbsp; S(' + k + ') = [' + order.join(', ') + '],&nbsp; first round pair sums = ' + (k + 1);
 }
 
 /* K_n MATCHING DIAGRAM, drawn on a felt table bed.
