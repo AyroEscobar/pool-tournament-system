@@ -1547,6 +1547,7 @@ function processMatch(item) {
       state.phase = 'done';
       sim.running = false;
       renderChampion();
+      el('champion-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       setStatus('<strong>' + escapeHtml(winner.name) + '</strong> takes the final ' + winnerRacks + '-' +
         loserRacks + ' and wins the tournament.');
     } else {
