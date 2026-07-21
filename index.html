@@ -1595,6 +1595,7 @@ function cancelMorph() {
     cancelAnimationFrame(diagram.morphRaf);
     diagram.morphRaf = null;
   }
+  clearTimeout(diagram.morphGuard);
 }
 
 /* THE ROTATION, ANIMATED. Seat pair i hosts one chord every round;
@@ -1646,11 +1647,22 @@ function morphToRound(r) {
       diagram.morphRaf = requestAnimationFrame(frame);
     } else {
       diagram.morphRaf = null;
+      clearTimeout(diagram.morphGuard);
       paintChords(r, false);
       pulseVertices();
     }
   }
   diagram.morphRaf = requestAnimationFrame(frame);
+  /* Animation frames pause in background tabs; if they never run,
+     land the chords anyway so the diagram cannot go stale. */
+  diagram.morphGuard = setTimeout(function () {
+    if (diagram.morphRaf) {
+      cancelAnimationFrame(diagram.morphRaf);
+      diagram.morphRaf = null;
+      paintChords(r, false);
+      pulseVertices();
+    }
+  }, DURATION + 500);
 }
 
 /* Shows round r. mode: 'none' repaints instantly, 'draw' chalks the
