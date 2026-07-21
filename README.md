@@ -4,6 +4,8 @@ A single file web app that schedules and simulates a complete eight ball tournam
 
 Built for CS 4302 (Mathematics of Computing) at UT Dallas. The eventual real world use is running a pool tournament at the UTD Student Union.
 
+![The app as it opens: generated schedule, passing verification panel, and the mathematics panel with the K_n matching diagram](docs/screenshot.png)
+
 ## Run it
 
 Open `index.html` in any modern browser, straight from the file system. No server, no build step, no storage APIs, no dependencies beyond Google Fonts (with system fallbacks if offline).
