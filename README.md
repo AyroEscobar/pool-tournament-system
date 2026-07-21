@@ -45,6 +45,8 @@ The construction is as old as the theory: Kirkman first built one-factorizations
 
 Odd fields add a phantom bye seat: the schedule becomes a one-factorization of K_(n+1) and the player paired with the phantom rests, so there are n rounds and each player rests exactly once.
 
+Why every pair meets exactly once, in two steps: number the ring vertices 1 to n-1. (1) Ring vertices i and j are paired in round r+1 exactly when i + j is congruent to -2r modulo n-1, because opposite seats have constant position sum and each rotation shifts the selected sum class by -2. (2) Since n-1 is odd, 2 is invertible modulo n-1, so the map from rounds to residue classes is a bijection: every ring pair lands in exactly one round, and the fixed vertex takes the leftover. The app displays this proof with the live modulus, shows the residue class each round selects under the diagram, and the test suite asserts the congruence for every field size.
+
 The app's verification panel recomputes five structural properties from the generated schedule (pair coverage, no double booking, round count, total matches, matches per round) and reports pass or fail, so correctness is demonstrated rather than asserted. The mathematics panel draws the one-factorization itself: players sit as fixed vertices of K_n on a felt table, each round's perfect matching is chalked in chord by chord, played edges remain as residue, and a live counter tracks edge coverage to exactly n(n-1)/2. Playing all rounds shows the matching pattern sweeping the table until the complete graph is fully inked.
 
 ### Elo simulation with calibrated race scores
