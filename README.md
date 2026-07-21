@@ -16,14 +16,15 @@ To test the algorithms outside the browser:
 node test/algorithms.test.mjs
 ```
 
-The runner extracts the exact algorithm block shipped inside `index.html` (framed by `[ALGO:BEGIN]` and `[ALGO:END]` markers) and runs roughly 84,000 assertions against it, so the tested code and the shipped code cannot drift apart.
+The runner extracts the exact algorithm block shipped inside `index.html` (framed by `[ALGO:BEGIN]` and `[ALGO:END]` markers) and runs just over 100,000 assertions against it, so the tested code and the shipped code cannot drift apart.
 
 ## What it does
 
-1. Accepts a roster of 4 to 16 players with Elo ratings (a default field of 8 loads immediately; odd counts get a rotating bye)
+1. Accepts a roster of 4 to 30 players with Elo ratings (a default field of 8 loads pre-generated; one click example fields at 8, 13, and 30; odd counts get a rotating bye)
 2. Generates the round robin with the circle method and proves its correctness in a live verification panel
-3. Plays every match visibly over time with Elo based odds, speed controls (slow, normal, fast, instant), pause and resume, and a progress meter
+3. Plays every match visibly over time with Elo based odds, speed controls (slow, normal, fast, instant), pause and resume, animated standings, and a progress meter
 4. Seeds the top finishers into a knockout bracket, advances winners through the tree, and crowns a champion
+5. Draws the mathematics live: the K_n diagram on its felt table inks each round's perfect matching chord by chord, keeps played edges as chalk residue, and counts coverage until all n(n-1)/2 edges are drawn exactly once
 
 ## Two minute demo
 
@@ -31,8 +32,8 @@ The runner extracts the exact algorithm block shipped inside `index.html` (frame
 2. Point at the group note (8 players, 7 rounds, 28 matches), then at the stat tiles in the mathematics panel where the same numbers fall out of n(n-1)/2.
 3. Press Start Tournament on Normal speed. A result lands roughly every 0.7 seconds: scores fill into the schedule, standings resort, and Elo deltas flash.
 4. Pause, resume, then switch the speed to Instant. The top 4 seed into the bracket and a champion is crowned.
-5. Step the K_n diagram through a few rounds. The seating line rotates one seat per round while the chord pattern stays fixed: that is the circle method in one picture.
-6. For the odd case, delete one roster line and press Generate. The panel now expects n rounds, every round shows a bye, and all checks still pass.
+5. Press Play on the K_n diagram. The matching sweeps the felt round by round, played edges stay as chalk residue, and the counter runs to "all 28 edges drawn exactly once". That is the one-factorization working in front of you.
+6. Click the example fields (8, 13, 30). Thirteen shows the rotating bye and n rounds for odd n; thirty shows the same guarantees at 29 rounds and 435 matches, verified live.
 
 ## The mathematics
 
@@ -44,7 +45,7 @@ The construction: fix one player in a seat, arrange the rest in a ring, pair opp
 
 Odd fields add a phantom bye seat: the schedule becomes a one-factorization of K_(n+1) and the player paired with the phantom rests, so there are n rounds and each player rests exactly once.
 
-The app's verification panel recomputes five structural properties from the generated schedule (pair coverage, no double booking, round count, total matches, matches per round) and reports pass or fail, so correctness is demonstrated rather than asserted. The mathematics panel also draws each round as a chord matching on K_n so the one-factorization is visible.
+The app's verification panel recomputes five structural properties from the generated schedule (pair coverage, no double booking, round count, total matches, matches per round) and reports pass or fail, so correctness is demonstrated rather than asserted. The mathematics panel draws the one-factorization itself: players sit as fixed vertices of K_n on a felt table, each round's perfect matching is chalked in chord by chord, played edges remain as residue, and a live counter tracks edge coverage to exactly n(n-1)/2. Playing all rounds shows the matching pattern sweeping the table until the complete graph is fully inked.
 
 ### Elo simulation with calibrated race scores
 
@@ -91,5 +92,6 @@ Everything lives in `index.html`, organized into commented sections:
 - Pause, resume, and all four speeds work, including switching mid run: yes
 - Top finishers advance into a correctly seeded bracket and a champion is crowned: yes
 - Odd player counts produce rotating byes without breaking: yes, each player rests exactly once
+- Scales beyond the assignment's 4 to 16: fields up to 30 players keep every guarantee (29 rounds, 435 matches, all checks passing, Elo conserved)
 - Mathematics panel explains the one-factorization, the Elo formula with a live worked example, and the seeding rule: yes
 - No em dashes in the interface: yes, enforced
