@@ -87,6 +87,25 @@ for (let N = 4; N <= 30; N++) {
   const verdicts = algo.verifySchedule(s);
   assert(verdicts.length === 5 && verdicts.every(c => c.pass),
     'N=' + N + ' verifySchedule should pass a correct schedule');
+
+  /* The congruence invariant the app displays under the diagram:
+     ring vertices i, j (ids 1..seats-1, the phantom bye seat
+     included) are paired in round r+1 exactly when
+     i + j ≡ -2r (mod seats-1). Pairings involving the fixed
+     vertex 0 are the leftover and are exempt. */
+  const seats = s.seatCount;
+  const invMod = seats - 1;
+  const phantom = N;
+  s.rounds.forEach((round, r) => {
+    const target = ((-2 * r) % invMod + invMod) % invMod;
+    for (const m of round) {
+      const x = m.bye !== undefined ? m.bye : m.a;
+      const y = m.bye !== undefined ? phantom : m.b;
+      if (x === 0 || y === 0) continue;
+      assert((x + y) % invMod === target,
+        'N=' + N + ' round ' + (r + 1) + ' ring sum invariant');
+    }
+  });
 }
 
 /* The verifier must also catch corruption, not just bless output. */
