@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Circle method round robin scheduler with live Elo simulation and a seeded knockout bracket, built for CS 4302 at UT Dallas.">
 <title>Eight Ball Tournament Scheduler</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23131513'/%3E%3Ccircle cx='16' cy='12' r='6.5' fill='%23f1ede0'/%3E%3Ctext x='16' y='15.6' font-size='9' font-weight='700' text-anchor='middle' fill='%23131513' font-family='Menlo,monospace'%3E8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,8 +51,16 @@ body {
 ::selection { background: rgba(232, 199, 102, 0.28); }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 30px 28px 64px; }
 
-/* Masthead */
-.masthead { border-bottom: 1px solid var(--line-strong); padding-bottom: 22px; }
+/* Masthead. The rule below it is drawn as a pool table rail: a thin
+   line carrying evenly spaced diamond sights, like the inlays on a
+   real table. */
+.masthead { padding-bottom: 22px; }
+.rail-rule {
+  height: 7px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='7'%3E%3Cpath d='M45 .5 48 3.5 45 6.5 42 3.5Z' fill='%233E7457'/%3E%3C/svg%3E") center / 90px 7px repeat-x,
+    linear-gradient(var(--line-strong), var(--line-strong)) center / 100% 1px no-repeat;
+}
 .eyebrow {
   font: 600 11px/1 var(--mono);
   letter-spacing: 0.14em;
@@ -157,6 +166,7 @@ body {
   border-right: 1px solid var(--line);
   color: var(--ink-dim);
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 .seg button:last-child { border-right: none; }
 .seg button:hover:not(.active) { background: rgba(241, 237, 224, 0.05); color: var(--ink); }
@@ -208,6 +218,7 @@ tr:last-child td { border-bottom: none; }
 
 /* Standings */
 .table-card { padding: 8px 12px; }
+.table-card tbody tr:hover td { background: rgba(241, 237, 224, 0.035); }
 .delta { font-size: 10.5px; margin-left: 6px; font-weight: 600; }
 .delta.up { color: var(--pass-ink); }
 .delta.down { color: var(--fail-ink); }
@@ -362,6 +373,7 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 }
 .champ-name { font: 600 40px/1.1 var(--serif); color: var(--ink); margin: 6px 0 10px; }
 .champ-line { font: 400 12px/1.6 var(--mono); color: var(--ink-dim); }
+.champ-hint { font: 400 11px/1.6 var(--mono); color: var(--ink-faint); margin-top: 8px; }
 
 /* Mathematics panel */
 #math-section { margin-top: 30px; }
@@ -416,6 +428,7 @@ footer {
     </h1>
     <p class="lede">Round robin scheduling by the circle method, live Elo driven simulation, and a seeded knockout bracket, built for the tables at the UTD Student Union.</p>
   </header>
+  <div class="rail-rule" aria-hidden="true"></div>
 
   <div class="layout">
     <aside class="sidebar" id="sidebar">
@@ -1169,7 +1182,8 @@ function renderChampion() {
     '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><circle cx="16" cy="16" r="14.6" fill="#131513" stroke="#D9B86A" stroke-width="1.4"/><circle cx="16" cy="11.6" r="5.9" fill="#F1EDE0"/><text x="16" y="15" font-size="8.4" font-weight="700" text-anchor="middle" fill="#131513" font-family="Menlo, monospace">8</text></svg>' +
     '<div class="champ-name">' + escapeHtml(champ.name) + '</div>' +
     '<div class="champ-line">Seed ' + seed + ' · group record ' + champ.wins + '-' + champ.losses +
-    ' · final Elo ' + Math.round(champ.elo) + '</div>';
+    ' · final Elo ' + Math.round(champ.elo) + '</div>' +
+    '<div class="champ-hint">Generate the schedule again to replay from the entered ratings.</div>';
 }
 
 /* Fills the mathematics panel with live numbers from the current
