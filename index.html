@@ -11,20 +11,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ================================================================
-   DESIGN SYSTEM: felt and chalk
-   Deep baize greens, chalk cream ink, cue chalk blue for actions,
-   chalk yellow for highlights. Serif headings (Fraunces), sans body
-   (IBM Plex Sans), mono data (IBM Plex Mono).
+   DESIGN SYSTEM: the pool hall
+   Charcoal room, chalk cream ink, cue chalk blue for actions, chalk
+   yellow for highlights. Felt green is reserved for the table bed in
+   the matching diagram, where the math is played out. Serif headings
+   (Fraunces), sans body (IBM Plex Sans), mono data (IBM Plex Mono).
    ================================================================ */
 :root {
-  --bg:          #092619;
-  --card:        #0F3B2A;
-  --card-inset:  #0A2F20;
-  --line:        #1F4F3A;
-  --line-strong: #2C624A;
+  --bg:          #101513;
+  --card:        #181E1A;
+  --card-inset:  #121714;
+  --line:        #2A332C;
+  --line-strong: #3B473E;
+  --felt:        #14523A;
+  --felt-deep:   #0E3D2B;
   --ink:         #F1EDE0;
-  --ink-dim:     #AFC5B6;
-  --ink-faint:   #7E9A8B;
+  --ink-dim:     #B6BFB4;
+  --ink-faint:   #87918A;
   --blue:        #56A0D6;
   --blue-deep:   #2E6D9E;
   --blue-hover:  #397FB5;
@@ -45,7 +48,7 @@ body {
   color: var(--ink);
   font: 400 14.5px/1.55 var(--sans);
   background-color: var(--bg);
-  background-image: radial-gradient(1100px 640px at 22% -8%, #14432F 0%, #0C2E20 48%, #092619 100%);
+  background-image: radial-gradient(1100px 640px at 22% -8%, #1A231D 0%, #141A16 48%, #101513 100%);
   background-attachment: fixed;
 }
 ::selection { background: rgba(232, 199, 102, 0.28); }
@@ -58,7 +61,7 @@ body {
 .rail-rule {
   height: 7px;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='7'%3E%3Cpath d='M45 .5 48 3.5 45 6.5 42 3.5Z' fill='%233E7457'/%3E%3C/svg%3E") center / 90px 7px repeat-x,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='7'%3E%3Cpath d='M45 .5 48 3.5 45 6.5 42 3.5Z' fill='%23485449'/%3E%3C/svg%3E") center / 90px 7px repeat-x,
     linear-gradient(var(--line-strong), var(--line-strong)) center / 100% 1px no-repeat;
 }
 .eyebrow {
