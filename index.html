@@ -406,6 +406,7 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .diagram-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 12px; }
 .diagram-controls .btn { padding: 6px 13px; font-size: 14px; }
 .diagram-label { font: 600 12px/1 var(--mono); letter-spacing: 0.06em; color: var(--ink-dim); min-width: 110px; text-align: center; }
+.seat-order { font-family: var(--mono); text-align: center; margin: -4px 0 12px; line-height: 1.7; }
 
 /* Footer */
 footer {
@@ -552,6 +553,7 @@ footer {
           <span class="diagram-label" id="diagram-round-label"></span>
           <button class="btn" id="btn-diagram-next" type="button" aria-label="Next round">&#8250;</button>
         </div>
+        <p class="fine seat-order" id="seat-order"></p>
         <p class="fine">The seat with the ring never moves; everyone else rotates one seat per round. Opposite
         seats play, so each round draws parallel chords: a perfect matching. Faint lines are all the edges of
         K<sub>n</sub>; stepping through the rounds, the bold chords cover each edge exactly once. A dashed chord
@@ -1298,6 +1300,14 @@ function renderDiagram() {
   el('diagram-round-label').textContent = 'Round ' + (r + 1) + ' of ' + s.rounds.length;
   el('btn-diagram-prev').disabled = r === 0;
   el('btn-diagram-next').disabled = r === s.rounds.length - 1;
+
+  /* The seat list in occupancy order, so stepping rounds makes the
+     one-seat rotation visible as text as well as geometry. */
+  const seatNames = seatedIds.map(function (id, seat) {
+    if (id === BYE) return 'bye';
+    return seat === 0 ? playerName(id) + ' (fixed)' : playerName(id);
+  });
+  el('seat-order').textContent = 'Seating: ' + seatNames.join(' · ');
 }
 
 function renderVerification() {
