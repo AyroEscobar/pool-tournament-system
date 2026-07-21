@@ -405,6 +405,14 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
   white-space: nowrap;
 }
 .fine { font-size: 12px !important; color: var(--ink-faint) !important; }
+.eqlabel {
+  font: 600 9.5px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 13px 0 6px;
+}
+.eqlabel + .formula { margin-top: 0; }
 .cite { font-size: 11px !important; color: var(--ink-faint) !important; line-height: 1.7 !important; }
 .fact-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 10px; }
 .fact { background: var(--card-inset); border: 1px solid var(--line); border-radius: 8px; padding: 11px 8px 9px; text-align: center; }
@@ -566,10 +574,15 @@ footer {
           <div class="fact"><div class="fact-value" id="fact-total"></div><div class="fact-label">matches</div></div>
         </div>
         <p class="fine" id="fact-formula"></p>
+        <div class="eqlabel">The object</div>
         <div class="formula" id="fact-union"></div>
-        <p class="fine">Each round is one matching M<sub>r</sub>; pairwise disjointness is exactly the no
-        repeat property the verification panel checks, and totality is the diagram's edge counter reaching
-        n(n-1)/2. Kirkman first constructed one-factorizations of complete graphs (1847); the circle
+        <div class="eqlabel">Why every pair meets exactly once, in two steps</div>
+        <div class="formula" id="proof-steps"></div>
+        <p class="fine">Number the ring vertices 1 to n-1 in entry order around the fixed vertex. Step (1) is
+        read off the seating geometry: opposite seats have constant position sum, and each rotation shifts
+        every position by one, so the sum class the round selects moves by -2. Step (2) is the arithmetic
+        that makes the sweep exhaustive. Disjointness is the verifier's no repeat check; totality is the edge
+        counter reaching n(n-1)/2. Kirkman first constructed one-factorizations (1847); the circle
         arrangement itself appears in Lucas (1883).</p>
         <p class="fine" id="fact-bye-note"></p>
       </div>
@@ -1331,6 +1344,18 @@ function renderMathPanel() {
   }
   el('fact-union').innerHTML = 'E(K<sub>' + s.seatCount + '</sub>) = ' + unionTerms +
     '&nbsp;&nbsp;&nbsp;(disjoint union of perfect matchings)';
+
+  /* The two step correctness argument, with this field's modulus.
+     Ring vertices i, j (numbered 1..n-1) are paired in round r+1
+     exactly when i + j ≡ -2r (mod n-1); oddness of n-1 makes 2
+     invertible, so the n-1 rounds sweep every residue class once. */
+  const mod = s.seatCount - 1;
+  el('proof-steps').innerHTML =
+    '(1)&nbsp; ring i, j meet in round r+1 &nbsp;⟺&nbsp; i + j ≡ -2r (mod ' + mod + ')<br>' +
+    '(2)&nbsp; ' + mod + ' odd ⇒ 2 invertible in Z<sub>' + mod + '</sub> ⇒ r ↦ -2r mod ' + mod +
+    ' is a bijection<br>' +
+    '∴&nbsp;&nbsp; each ring pair meets in exactly one of the ' + s.rounds.length +
+    ' rounds; the fixed vertex takes the leftover';
   el('fact-bye-note').textContent = s.hasBye
     ? 'Odd field: a phantom bye seat makes the seat count even, so this schedule is a one-factorization of K_' +
       s.seatCount + ', and whoever pairs with the phantom rests that round.'
