@@ -1547,7 +1547,20 @@ function processMatch(item) {
       state.phase = 'done';
       sim.running = false;
       renderChampion();
-      el('champion-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      /* Deferred so the scroll survives the instant drain's render
+         burst. Browsers can throttle smooth scrolling in unfocused
+         tabs, so if the banner still is not visible shortly after,
+         jump to it instantly. */
+      setTimeout(function () {
+        const banner = el('champion-banner');
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(function () {
+          const rect = banner.getBoundingClientRect();
+          if (rect.top >= window.innerHeight || rect.bottom <= 0) {
+            banner.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+          }
+        }, 700);
+      }, 120);
       setStatus('<strong>' + escapeHtml(winner.name) + '</strong> takes the final ' + winnerRacks + '-' +
         loserRacks + ' and wins the tournament.');
     } else {
