@@ -25,6 +25,15 @@ The runner extracts the exact algorithm block shipped inside `index.html` (frame
 3. Plays every match visibly over time with Elo based odds, speed controls (slow, normal, fast, instant), pause and resume, and a progress meter
 4. Seeds the top finishers into a knockout bracket, advances winners through the tree, and crowns a champion
 
+## Two minute demo
+
+1. Open `index.html`. It loads with the default eight player field already scheduled and the verification panel showing 5 of 5 checks passing.
+2. Point at the group note (8 players, 7 rounds, 28 matches), then at the stat tiles in the mathematics panel where the same numbers fall out of n(n-1)/2.
+3. Press Start Tournament on Normal speed. A result lands roughly every 0.7 seconds: scores fill into the schedule, standings resort, and Elo deltas flash.
+4. Pause, resume, then switch the speed to Instant. The top 4 seed into the bracket and a champion is crowned.
+5. Step the K_n diagram through a few rounds. The seating line rotates one seat per round while the chord pattern stays fixed: that is the circle method in one picture.
+6. For the odd case, delete one roster line and press Generate. The panel now expects n rounds, every round shows a bye, and all checks still pass.
+
 ## The mathematics
 
 ### Circle method, viewed as a one-factorization
