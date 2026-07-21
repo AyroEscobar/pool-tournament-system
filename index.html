@@ -424,11 +424,19 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .table-bed { fill: var(--felt); stroke: var(--felt-deep); stroke-width: 3; }
 .k-edge { stroke: #F1EDE0; stroke-width: 1; }
 .chord { stroke: #E8C766; stroke-width: 2.2; stroke-linecap: round; }
+.chord-hub { stroke: #F2D98C; }
 .chord-bye { stroke: #9C9E97; stroke-width: 2; stroke-dasharray: 5 5; stroke-linecap: butt; }
-@keyframes chalkdraw { to { stroke-dashoffset: 0; } }
+.vdot.pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vertexpulse 0.5s ease-out;
+}
+@keyframes vertexpulse { 50% { transform: scale(1.65); } }
+@keyframes chalkdraw { 0% { stroke-width: 3.1; } to { stroke-dashoffset: 0; stroke-width: 2.2; } }
 @keyframes chalkfade { to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .chord, .chord-bye { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
+  .vdot.pulse { animation: none !important; }
 }
 
 /* Footer */
@@ -589,11 +597,12 @@ footer {
         </div>
         <p class="fine coverage-line" id="coverage-line"></p>
         <p class="fine seat-order" id="seat-order"></p>
-        <p class="fine">Vertices are the players, fixed in place, with the ringed vertex the fixed seat of the
-        rotation (and a phantom vertex for the bye when the field is odd). Bold chalk chords are this round's
-        matches: no two share a vertex, a perfect matching. Step or play the rounds and the pattern sweeps
-        around the table, leaving already played edges as chalk residue, until every edge of K<sub>n</sub> has
-        been drawn exactly once. A dashed chord is a bye.</p>
+        <p class="fine">Vertices are the players, fixed in place; the ringed vertex is the fixed seat, and its
+        brighter chord is that player's match, the clock hand of the rotation. Bold chords are this round's
+        matching M<sub>r</sub>: no two share a vertex, and every vertex is hit exactly once, which is why all
+        the dots pulse as a round lands. Stepping forward slides each chord one ring seat, the rotation
+        itself, while played edges stay behind as chalk residue until every edge of K<sub>n</sub> is drawn
+        exactly once. A dashed chord is a bye.</p>
       </div>
 
       <div class="card math-card">
@@ -1400,6 +1409,7 @@ function buildDiagram() {
   diagram.positions = [];
   diagram.faint = seats > 20 ? 0.03 : seats > 12 ? 0.045 : 0.06;
   const R = big ? 118 : 122;
+  diagram.R = R;
   for (let i = 0; i < seats; i++) diagram.positions.push(vertexPos(i, seats, R));
 
   const parts = [];
@@ -1421,8 +1431,8 @@ function buildDiagram() {
   for (let v = 0; v < seats; v++) {
     const p = diagram.positions[v];
     const isBye = s.hasBye && v === byeVertexIndex();
-    parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + dotR + '" fill="' +
-      (isBye ? '#9C9E97' : '#F1EDE0') + '"/>');
+    parts.push('<circle class="vdot" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + dotR +
+      '" fill="' + (isBye ? '#9C9E97' : '#F1EDE0') + '"/>');
     if (v === 0) {
       parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) +
         '" r="' + (dotR + 4.4) + '" fill="none" stroke="#E8C766" stroke-width="1.5"/>');
@@ -1447,14 +1457,10 @@ function buildDiagram() {
   diagram.built = true;
 }
 
-/* Shows round r: residue for rounds before it, chalk chords for its
-   own matching (drawn in with a stagger when animating), and the
-   live edge count. */
-function showDiagramRound(r, animate) {
-  if (!diagram.built) return;
+/* Repaints the residue for all rounds before r and returns how many
+   edges that residue covers. */
+function updateResidue(r) {
   const s = state.schedule;
-  state.diagramRound = r;
-
   const covered = new Set();
   for (let k = 0; k < r; k++) {
     for (const key of roundEdgeKeys(s.rounds[k])) covered.add(key);
@@ -1469,35 +1475,61 @@ function showDiagramRound(r, animate) {
       line.style.strokeOpacity = diagram.faint;
     }
   }
+  return covered.size;
+}
 
-  const animating = animate && !REDUCED_MOTION;
-  const chords = [];
-  let n = 0;
-  for (const m of s.rounds[r]) {
-    const isBye = m.bye !== undefined;
-    const va = isBye ? m.bye : m.a;
-    const vb = isBye ? byeVertexIndex() : m.b;
-    const p = diagram.positions[va];
-    const q = diagram.positions[vb];
+/* Round r's chord for seat pair i, read straight from the stored
+   arrangement so both endpoints keep their seat identity. Seat pair
+   i is (seat i, seat n-1-i); the bye maps to the phantom vertex. */
+function chordEndpoints(r, i) {
+  const arr = state.schedule.arrangements[r];
+  const n = diagram.seats;
+  const rawA = arr[i];
+  const rawB = arr[n - 1 - i];
+  return {
+    va: rawA === BYE ? byeVertexIndex() : rawA,
+    vb: rawB === BYE ? byeVertexIndex() : rawB,
+    isBye: rawA === BYE || rawB === BYE
+  };
+}
+
+/* The fixed player's own match gets a brighter stroke: it is the
+   clock hand of the rotation. */
+function chordClass(c) {
+  if (c.isBye) return 'chord-bye';
+  return c.va === 0 || c.vb === 0 ? 'chord chord-hub' : 'chord';
+}
+
+function paintChords(r, animate) {
+  const pairs = diagram.seats / 2;
+  const parts = [];
+  for (let i = 0; i < pairs; i++) {
+    const c = chordEndpoints(r, i);
+    const p = diagram.positions[c.va];
+    const q = diagram.positions[c.vb];
     let style = '';
-    if (animating) {
-      if (isBye) {
-        style = 'opacity:0;animation:chalkfade 0.4s ease-out forwards;animation-delay:' + (n * 60) + 'ms;';
+    if (animate && !REDUCED_MOTION) {
+      if (c.isBye) {
+        style = 'opacity:0;animation:chalkfade 0.4s ease-out forwards;animation-delay:' + (i * 70) + 'ms;';
       } else {
         const len = Math.hypot(q.x - p.x, q.y - p.y).toFixed(1);
         style = 'stroke-dasharray:' + len + ';stroke-dashoffset:' + len +
-          ';animation:chalkdraw 0.5s ease-out forwards;animation-delay:' + (n * 60) + 'ms;';
+          ';animation:chalkdraw 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) forwards;animation-delay:' +
+          (i * 70) + 'ms;';
       }
     }
-    chords.push('<line class="' + (isBye ? 'chord-bye' : 'chord') + '" x1="' + p.x.toFixed(1) + '" y1="' +
-      p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '"' +
+    parts.push('<line class="' + chordClass(c) + '" x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) +
+      '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '"' +
       (style ? ' style="' + style + '"' : '') + '/>');
-    n++;
   }
-  el('chord-layer').innerHTML = chords.join('');
+  el('chord-layer').innerHTML = parts.join('');
+}
 
+/* Counter, round label, buttons, and the seating line. */
+function updateDiagramMeta(r, coveredBefore) {
+  const s = state.schedule;
   const totalEdges = diagram.seats * (diagram.seats - 1) / 2;
-  const after = covered.size + s.rounds[r].length;
+  const after = coveredBefore + s.rounds[r].length;
   const cov = el('coverage-line');
   if (r === s.rounds.length - 1) {
     cov.innerHTML = 'All <strong>' + totalEdges + '</strong> edges of K<sub>' + diagram.seats +
@@ -1532,6 +1564,117 @@ function showDiagramRound(r, animate) {
   }
 }
 
+/* Every vertex gains exactly one chord endpoint per round; the brief
+   pulse after the chords land asserts that visually, which is the
+   definition of a perfect matching. */
+function pulseVertices() {
+  if (REDUCED_MOTION) return;
+  const dots = el('kn-diagram').querySelectorAll('.vdot');
+  for (const dot of dots) dot.classList.remove('pulse');
+  void el('kn-diagram').getBoundingClientRect();
+  for (const dot of dots) dot.classList.add('pulse');
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function angleOfVertex(v) {
+  return -Math.PI / 2 + (v * 2 * Math.PI) / diagram.seats;
+}
+
+function shortestAngle(from, to) {
+  let d = (to - from) % (2 * Math.PI);
+  if (d > Math.PI) d -= 2 * Math.PI;
+  if (d < -Math.PI) d += 2 * Math.PI;
+  return d;
+}
+
+function cancelMorph() {
+  if (diagram.morphRaf) {
+    cancelAnimationFrame(diagram.morphRaf);
+    diagram.morphRaf = null;
+  }
+}
+
+/* THE ROTATION, ANIMATED. Seat pair i hosts one chord every round;
+   between round r-1 and round r each occupant advances one ring
+   seat, so every chord endpoint slides one vertex step around the
+   rim (two steps when wrapping past the fixed vertex). Interpolating
+   endpoint angles along the shortest arc replays exactly that: the
+   whole matching sweeps one notch, with the fixed player's endpoint
+   pinned in place like an axle. */
+function morphToRound(r) {
+  cancelMorph();
+  const pairs = diagram.seats / 2;
+  const specs = [];
+  const parts = [];
+  for (let i = 0; i < pairs; i++) {
+    const from = chordEndpoints(r - 1, i);
+    const to = chordEndpoints(r, i);
+    const a0 = angleOfVertex(from.va);
+    const b0 = angleOfVertex(from.vb);
+    specs.push({
+      a0: a0,
+      ad: shortestAngle(a0, angleOfVertex(to.va)),
+      b0: b0,
+      bd: shortestAngle(b0, angleOfVertex(to.vb))
+    });
+    const p = diagram.positions[from.va];
+    const q = diagram.positions[from.vb];
+    parts.push('<line class="' + chordClass(to) + '" x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) +
+      '" x2="' + q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) + '"/>');
+  }
+  el('chord-layer').innerHTML = parts.join('');
+  const lines = el('chord-layer').querySelectorAll('line');
+  const R = diagram.R;
+  const started = performance.now();
+  const DURATION = 620;
+  function frame(now) {
+    const t = Math.min(1, (now - started) / DURATION);
+    const e = easeInOutCubic(t);
+    for (let i = 0; i < specs.length; i++) {
+      const sp = specs[i];
+      const aa = sp.a0 + sp.ad * e;
+      const bb = sp.b0 + sp.bd * e;
+      lines[i].setAttribute('x1', (210 + R * Math.cos(aa)).toFixed(1));
+      lines[i].setAttribute('y1', (200 + R * Math.sin(aa)).toFixed(1));
+      lines[i].setAttribute('x2', (210 + R * Math.cos(bb)).toFixed(1));
+      lines[i].setAttribute('y2', (200 + R * Math.sin(bb)).toFixed(1));
+    }
+    if (t < 1) {
+      diagram.morphRaf = requestAnimationFrame(frame);
+    } else {
+      diagram.morphRaf = null;
+      paintChords(r, false);
+      pulseVertices();
+    }
+  }
+  diagram.morphRaf = requestAnimationFrame(frame);
+}
+
+/* Shows round r. mode: 'none' repaints instantly, 'draw' chalks the
+   chords in, 'morph' slides them from the previous round (falls back
+   to 'draw' when not stepping forward by one). */
+function showDiagramRound(r, mode) {
+  if (!diagram.built) return;
+  const forward = r === state.diagramRound + 1;
+  state.diagramRound = r;
+  const coveredBefore = updateResidue(r);
+  updateDiagramMeta(r, coveredBefore);
+  if (mode === 'morph' && forward && !REDUCED_MOTION) {
+    morphToRound(r);
+    return;
+  }
+  cancelMorph();
+  const animate = mode !== 'none';
+  paintChords(r, animate);
+  if (animate && !REDUCED_MOTION) {
+    clearTimeout(diagram.pulseTimer);
+    diagram.pulseTimer = setTimeout(pulseVertices, (diagram.seats / 2) * 70 + 480);
+  }
+}
+
 /* Auto-play: advances one round at a time so the sweep and the
    accumulating residue can be watched hands free. */
 function stopDiagramPlay() {
@@ -1547,9 +1690,9 @@ function diagramPlayStep() {
   if (!diagram.playing) return;
   const last = state.schedule.rounds.length - 1;
   if (state.diagramRound >= last) { stopDiagramPlay(); return; }
-  showDiagramRound(state.diagramRound + 1, true);
+  showDiagramRound(state.diagramRound + 1, 'morph');
   if (state.diagramRound >= last) { stopDiagramPlay(); return; }
-  diagram.playTimer = setTimeout(diagramPlayStep, REDUCED_MOTION ? 650 : 1150);
+  diagram.playTimer = setTimeout(diagramPlayStep, REDUCED_MOTION ? 650 : 1400);
 }
 
 function toggleDiagramPlay() {
@@ -1558,7 +1701,7 @@ function toggleDiagramPlay() {
   diagram.playing = true;
   el('btn-diagram-play').textContent = 'Pause';
   if (state.diagramRound >= state.schedule.rounds.length - 1) {
-    showDiagramRound(0, true);
+    showDiagramRound(0, 'draw');
   }
   diagram.playTimer = setTimeout(diagramPlayStep, REDUCED_MOTION ? 650 : 1050);
 }
@@ -1909,7 +2052,7 @@ function handleGenerate() {
   renderMathPanel();
   stopDiagramPlay();
   buildDiagram();
-  showDiagramRound(0, false);
+  showDiagramRound(0, 'none');
   sim.completed = 0;
   sim.totalMatches = totalMatchTarget(state.players.length);
   renderProgress();
@@ -1933,13 +2076,13 @@ el('btn-pause').addEventListener('click', function () {
 el('btn-diagram-prev').addEventListener('click', function () {
   if (state.diagramRound > 0) {
     stopDiagramPlay();
-    showDiagramRound(state.diagramRound - 1, true);
+    showDiagramRound(state.diagramRound - 1, 'draw');
   }
 });
 el('btn-diagram-next').addEventListener('click', function () {
   if (state.schedule && state.diagramRound < state.schedule.rounds.length - 1) {
     stopDiagramPlay();
-    showDiagramRound(state.diagramRound + 1, true);
+    showDiagramRound(state.diagramRound + 1, 'morph');
   }
 });
 el('btn-diagram-play').addEventListener('click', toggleDiagramPlay);
