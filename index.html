@@ -539,6 +539,84 @@ function verifySchedule(s) {
   return checks;
 }
 
+/* ELO RATING SYSTEM (standard formulation, K = 32)
+
+   Expected score of A against B:
+     E_A = 1 / (1 + 10^((R_B - R_A) / 400))
+   After a match, with S = 1 for a win and 0 for a loss:
+     R_new = R_old + K * (S - E)
+   Because E_B = 1 - E_A, the two updates are equal and opposite, so
+   rating points are conserved across a match. */
+const ELO_K = 32;
+
+function eloExpected(ratingA, ratingB) {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+function eloDelta(expected, score) {
+  return ELO_K * (score - expected);
+}
+
+/* RACE SCORE MODEL
+
+   Pool matches here are races: first player to `raceTo` racks wins.
+   If A wins each rack independently with probability q, the chance A
+   takes the match is a negative binomial tail: A must reach raceTo
+   rack wins while B has k = 0..raceTo-1, and the last rack won is
+   always A's, so
+
+     P(A wins match) = sum over k of C(raceTo-1+k, k) * q^raceTo * (1-q)^k
+
+   To keep the simulation honest to the ratings, we do not use the
+   Elo expectation as the per-rack probability (a race amplifies the
+   favorite). Instead we invert the formula by bisection to find the
+   q whose MATCH win probability equals the Elo expectation. The
+   match outcome then follows the Elo odds exactly, while the rack by
+   rack playout produces realistic scorelines: heavy favorites win
+   wide, close matches go deep. */
+function binomial(n, k) {
+  let result = 1;
+  for (let i = 1; i <= k; i++) result = result * (n - k + i) / i;
+  return result;
+}
+
+function raceWinProbability(q, raceTo) {
+  let total = 0;
+  for (let k = 0; k < raceTo; k++) {
+    total += binomial(raceTo - 1 + k, k) * Math.pow(q, raceTo) * Math.pow(1 - q, k);
+  }
+  return total;
+}
+
+/* raceWinProbability is strictly increasing in q, so bisection
+   converges; 60 halvings pin q far below display precision. */
+function rackProbabilityFor(matchExpectation, raceTo) {
+  let lo = 1e-9;
+  let hi = 1 - 1e-9;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (raceWinProbability(mid, raceTo) < matchExpectation) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/* Plays one match. Draws rack winners until someone reaches raceTo.
+   rng is injectable so tests can run deterministically.
+   Returns { aRacks, bRacks, aWins, expectedA }. */
+function simulateMatch(ratingA, ratingB, raceTo, rng) {
+  const random = rng || Math.random;
+  const expectedA = eloExpected(ratingA, ratingB);
+  const q = rackProbabilityFor(expectedA, raceTo);
+  let aRacks = 0;
+  let bRacks = 0;
+  while (aRacks < raceTo && bRacks < raceTo) {
+    if (random() < q) aRacks++;
+    else bRacks++;
+  }
+  return { aRacks: aRacks, bRacks: bRacks, aWins: aRacks === raceTo, expectedA: expectedA };
+}
+
 // [ALGO:END]
 
 /* ----------------------------------------------------------------
