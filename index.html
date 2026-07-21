@@ -250,6 +250,21 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .chip-pass { color: var(--pass-ink); border-color: rgba(119, 194, 137, 0.45); background: rgba(119, 194, 137, 0.08); }
 .chip-fail { color: var(--fail-ink); border-color: rgba(229, 118, 92, 0.5); background: rgba(229, 118, 92, 0.1); }
 
+/* Controls card */
+.controls-buttons { display: flex; gap: 9px; }
+.controls-buttons .btn { flex: 1; }
+.control-label {
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 14px 0 7px;
+}
+.progress-wrap { margin-top: 15px; }
+.progress-label { font: 400 11px/1 var(--mono); color: var(--ink-dim); margin-top: 7px; }
+.status-line { margin-top: 13px; font: 400 12px/1.65 var(--mono); color: var(--ink-dim); min-height: 2.6em; }
+.status-line strong { color: var(--yellow); font-weight: 600; }
+
 /* Progress meter */
 .progress { height: 8px; background: var(--card-inset); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; background: var(--blue); transition: width 0.3s ease; }
@@ -331,6 +346,26 @@ footer {
           <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
           <button class="btn-quiet" id="btn-restore" type="button">restore default field</button>
         </div>
+      </section>
+
+      <section class="card" id="controls-card" hidden>
+        <h2 class="card-title">Tournament Control</h2>
+        <div class="controls-buttons">
+          <button class="btn btn-primary" id="btn-start">Start Tournament</button>
+          <button class="btn" id="btn-pause" disabled>Pause</button>
+        </div>
+        <div class="control-label">Speed</div>
+        <div class="seg" id="speed-seg" role="group" aria-label="Simulation speed">
+          <button type="button" data-speed="slow">Slow</button>
+          <button type="button" data-speed="normal" class="active">Normal</button>
+          <button type="button" data-speed="fast">Fast</button>
+          <button type="button" data-speed="instant">Instant</button>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-label" id="progress-label"></div>
+        </div>
+        <div class="status-line" id="status-line" role="status"></div>
       </section>
 
       <section class="card" id="verify-card" hidden>
@@ -786,6 +821,47 @@ function renderStandings(result) {
   el('standings-body').innerHTML = rows.join('');
 }
 
+/* Repaints a resolved group match row in place: score, winner in
+   chalk yellow, loser dimmed, brief flash. */
+function patchGroupMatch(r, i) {
+  const m = state.schedule.rounds[r][i];
+  const div = el('match-g-' + r + '-' + i);
+  if (!div) return;
+  const aWon = m.result.winnerId === m.a;
+  div.className = 'match just';
+  div.innerHTML =
+    '<span class="m-side m-a ' + (aWon ? 'won' : 'lost') + '">' + escapeHtml(playerName(m.a)) + '</span>' +
+    '<span class="m-score">' + m.result.aRacks + '-' + m.result.bRacks + '</span>' +
+    '<span class="m-side m-b ' + (aWon ? 'lost' : 'won') + '">' + escapeHtml(playerName(m.b)) + '</span>';
+}
+
+/* Outlines the round currently on the tables; -1 clears all. */
+function highlightRound(activeRound) {
+  const rounds = state.schedule.rounds;
+  for (let r = 0; r < rounds.length; r++) {
+    const card = el('round-g-' + r);
+    if (card) card.classList.toggle('active', r === activeRound);
+  }
+}
+
+function renderProgress() {
+  const pct = sim.totalMatches ? (sim.completed / sim.totalMatches) * 100 : 0;
+  el('progress-fill').style.width = pct + '%';
+  el('progress-label').textContent = sim.completed + ' of ' + sim.totalMatches + ' matches played';
+}
+
+function setStatus(html) {
+  el('status-line').innerHTML = html;
+}
+
+/* Keeps the buttons honest about what is possible right now. */
+function updateControls() {
+  el('btn-start').disabled = state.phase !== 'ready';
+  const pause = el('btn-pause');
+  pause.disabled = !sim.running;
+  pause.textContent = sim.paused ? 'Resume' : 'Pause';
+}
+
 function renderVerification() {
   const checks = verifySchedule(state.schedule);
   const rows = checks.map(function (c) {
@@ -856,7 +932,170 @@ function renderSchedule() {
 
 /* ----------------------------------------------------------------
    SECTION 5: SIMULATION LOOP
+   Matches resolve one at a time on a timer so the tournament plays
+   out visibly. A queue of work items drives everything: group
+   matches, then a seeding step, then bracket matches. Pause clears
+   the timer; resume re-arms it; instant drains the queue in one go.
    ---------------------------------------------------------------- */
+
+const RACE_TO_GROUP = 5;   // group and early bracket: first to 5 racks
+const RACE_TO_FINAL = 7;   // the final: first to 7
+
+const SPEEDS = { slow: 1500, normal: 650, fast: 220, instant: 0 };
+
+const sim = {
+  running: false,
+  paused: false,
+  speed: 'normal',
+  timer: null,
+  queue: [],        // [{kind:'match', phase, round, index} | {kind:'seed'}]
+  cursor: 0,
+  completed: 0,
+  totalMatches: 0
+};
+
+function buildGroupQueue() {
+  sim.queue = [];
+  const rounds = state.schedule.rounds;
+  for (let r = 0; r < rounds.length; r++) {
+    for (let i = 0; i < rounds[r].length; i++) {
+      if (rounds[r][i].bye === undefined) {
+        sim.queue.push({ kind: 'match', phase: 'group', round: r, index: i });
+      }
+    }
+  }
+  sim.queue.push({ kind: 'seed' });
+}
+
+function startTournament() {
+  if (state.phase !== 'ready') return;
+  buildGroupQueue();
+  const N = state.players.length;
+  sim.totalMatches = N * (N - 1) / 2;
+  sim.cursor = 0;
+  sim.completed = 0;
+  sim.running = true;
+  sim.paused = false;
+  state.phase = 'group';
+  updateControls();
+  renderProgress();
+  scheduleNext(true);
+}
+
+function stopSim() {
+  clearTimeout(sim.timer);
+  sim.running = false;
+  sim.paused = false;
+}
+
+/* Delay before the next item resolves. New rounds and the seeding
+   step get a longer breather so phase changes read clearly. */
+function currentDelay() {
+  const base = SPEEDS[sim.speed];
+  const item = sim.queue[sim.cursor];
+  if (!item) return base;
+  if (item.kind === 'seed') return base * 2;
+  if (item.kind === 'match' && item.index === firstMatchIndex(item)) return Math.round(base * 1.7);
+  return base;
+}
+
+/* Index of the first real match in this item's round, used to spot
+   round boundaries for the longer breather. */
+function firstMatchIndex(item) {
+  const round = roundsFor(item.phase)[item.round];
+  for (let i = 0; i < round.length; i++) {
+    if (round[i].bye === undefined) return i;
+  }
+  return -1;
+}
+
+function roundsFor(phase) {
+  return phase === 'group' ? state.schedule.rounds : state.bracket.rounds;
+}
+
+function scheduleNext(firstTick) {
+  clearTimeout(sim.timer);
+  if (!sim.running || sim.paused) return;
+  if (sim.speed === 'instant') { drainInstant(); return; }
+  sim.timer = setTimeout(step, firstTick ? 400 : currentDelay());
+  previewNext();
+}
+
+function step() {
+  if (!sim.running || sim.paused) return;
+  const item = sim.queue[sim.cursor];
+  if (!item) { sim.running = false; updateControls(); return; }
+  sim.cursor++;
+  processItem(item);
+  if (sim.running) scheduleNext(false);
+}
+
+function drainInstant() {
+  while (sim.running && !sim.paused) {
+    const item = sim.queue[sim.cursor];
+    if (!item) { sim.running = false; break; }
+    sim.cursor++;
+    processItem(item);
+  }
+  updateControls();
+}
+
+function processItem(item) {
+  if (item.kind === 'match') processMatch(item);
+  else if (item.kind === 'seed') processSeeding();
+}
+
+/* Resolves one group match: simulate at the current ratings, apply
+   the Elo transfer, update records, and repaint the affected UI. */
+function processMatch(item) {
+  const m = roundsFor(item.phase)[item.round][item.index];
+  const pa = state.players[m.a];
+  const pb = state.players[m.b];
+  const res = simulateMatch(pa.elo, pb.elo, RACE_TO_GROUP, Math.random);
+  const deltaA = eloDelta(res.expectedA, res.aWins ? 1 : 0);
+  pa.elo += deltaA;
+  pb.elo -= deltaA;
+  const winner = res.aWins ? pa : pb;
+  const loser = res.aWins ? pb : pa;
+  winner.wins++;
+  loser.losses++;
+  pa.played++;
+  pb.played++;
+  m.result = { aRacks: res.aRacks, bRacks: res.bRacks, winnerId: winner.id };
+  sim.completed++;
+  patchGroupMatch(item.round, item.index);
+  highlightRound(item.round);
+  renderStandings({ aId: pa.id, bId: pb.id, deltaA: deltaA, deltaB: -deltaA });
+  renderProgress();
+  const winnerRacks = Math.max(m.result.aRacks, m.result.bRacks);
+  const loserRacks = Math.min(m.result.aRacks, m.result.bRacks);
+  setStatus('Round ' + (item.round + 1) + ': <strong>' + escapeHtml(winner.name) + '</strong> defeats ' +
+    escapeHtml(loser.name) + ' ' + winnerRacks + '-' + loserRacks);
+}
+
+/* Group stage complete. The bracket section extends this handler. */
+function processSeeding() {
+  sim.running = false;
+  state.phase = 'groupdone';
+  highlightRound(-1);
+  setStatus('Group stage complete. All ' + sim.completed + ' matches played.');
+  updateControls();
+}
+
+function previewNext() {
+  const item = sim.queue[sim.cursor];
+  if (!item || item.kind !== 'match') return;
+  const m = roundsFor(item.phase)[item.round][item.index];
+  const div = matchElement(item);
+  if (div) div.classList.add('playing');
+  setStatus('On the table: ' + escapeHtml(playerName(m.a)) + ' vs ' + escapeHtml(playerName(m.b)) +
+    ', race to ' + RACE_TO_GROUP);
+}
+
+function matchElement(item) {
+  if (item.phase === 'group') return el('match-g-' + item.round + '-' + item.index);
+  return null;
+}
 
 /* ----------------------------------------------------------------
    SECTION 6: EVENT WIRING
@@ -869,6 +1108,7 @@ function handleGenerate() {
   const parsed = parseRoster(el('roster-input').value);
   renderRosterErrors(parsed.errors);
   if (parsed.errors.length) return;
+  stopSim();
   state.players = parsed.players.map(function (p, id) {
     return { id: id, name: p.name, elo: p.elo, startElo: p.elo, wins: 0, losses: 0, played: 0 };
   });
@@ -878,13 +1118,40 @@ function handleGenerate() {
   el('group-section').hidden = false;
   el('verify-card').hidden = false;
   el('standings-section').hidden = false;
+  el('controls-card').hidden = false;
   renderGroupNote();
   renderSchedule();
   renderVerification();
   renderStandings(null);
+  sim.completed = 0;
+  const N = state.players.length;
+  sim.totalMatches = N * (N - 1) / 2;
+  renderProgress();
+  setStatus('Schedule ready. Press start to play the group stage.');
+  updateControls();
 }
 
 el('btn-generate').addEventListener('click', handleGenerate);
+el('btn-start').addEventListener('click', startTournament);
+el('btn-pause').addEventListener('click', function () {
+  if (!sim.running) return;
+  sim.paused = !sim.paused;
+  if (sim.paused) {
+    clearTimeout(sim.timer);
+    setStatus('Paused. Standings and ratings hold until you resume.');
+  } else {
+    scheduleNext(false);
+  }
+  updateControls();
+});
+el('speed-seg').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-speed]');
+  if (!button) return;
+  sim.speed = button.dataset.speed;
+  const buttons = el('speed-seg').querySelectorAll('button');
+  for (const b of buttons) b.classList.toggle('active', b === button);
+  if (sim.running && !sim.paused) scheduleNext(false);
+});
 el('btn-restore').addEventListener('click', function () {
   el('roster-input').value = DEFAULT_ROSTER;
   renderRosterErrors([]);
