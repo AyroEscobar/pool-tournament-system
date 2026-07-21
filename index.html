@@ -1125,8 +1125,20 @@ function computeStandings() {
 }
 
 /* Rebuilds the standings body. `result` is the just-resolved match
-   (or null): its two players get a flash and a signed Elo delta. */
+   (or null): its two players get a flash and a signed Elo delta.
+   Rows that changed position glide to their new spot (a FLIP
+   transition: measure old tops, re-render, offset, release), skipped
+   during instant drains and under reduced motion. */
 function renderStandings(result) {
+  const body = el('standings-body');
+  const animate = !REDUCED_MOTION && !(sim.speed === 'instant' && sim.running);
+  const oldTops = {};
+  if (animate) {
+    for (const row of body.children) {
+      oldTops[row.dataset.pid] = row.getBoundingClientRect().top;
+    }
+  }
+
   const rows = computeStandings().map(function (p, rank) {
     let deltaHtml = '';
     let flash = '';
@@ -1142,7 +1154,7 @@ function renderStandings(result) {
     if (state.bracket && state.bracket.seedOf.has(p.id)) {
       seedHtml = '<span class="seed-chip">S' + state.bracket.seedOf.get(p.id) + '</span>';
     }
-    return '<tr' + flash + '>' +
+    return '<tr data-pid="' + p.id + '"' + flash + '>' +
       '<td>' + (rank + 1) + '</td>' +
       '<td>' + escapeHtml(p.name) + seedHtml + '</td>' +
       '<td class="num">' + p.wins + '</td>' +
@@ -1151,7 +1163,22 @@ function renderStandings(result) {
       '<td class="num">' + Math.round(p.elo) + deltaHtml + '</td>' +
       '</tr>';
   });
-  el('standings-body').innerHTML = rows.join('');
+  body.innerHTML = rows.join('');
+
+  if (animate) {
+    for (const row of body.children) {
+      const oldTop = oldTops[row.dataset.pid];
+      if (oldTop === undefined) continue;
+      const delta = oldTop - row.getBoundingClientRect().top;
+      if (!delta) continue;
+      row.style.transition = 'none';
+      row.style.transform = 'translateY(' + delta + 'px)';
+      requestAnimationFrame(function () {
+        row.style.transition = 'transform 0.35s ease';
+        row.style.transform = '';
+      });
+    }
+  }
 }
 
 /* Repaints a resolved group match row in place: score, winner in
