@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eight Ball Tournament Scheduler</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23131513'/%3E%3Ccircle cx='16' cy='12' r='6.5' fill='%23f1ede0'/%3E%3Ctext x='16' y='15.6' font-size='9' font-weight='700' text-anchor='middle' fill='%23131513' font-family='Menlo,monospace'%3E8%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   DESIGN SYSTEM: felt and chalk
+   Deep baize greens, chalk cream ink, cue chalk blue for actions,
+   chalk yellow for highlights. Serif headings (Fraunces), sans body
+   (IBM Plex Sans), mono data (IBM Plex Mono).
+   ================================================================ */
+:root {
+  --bg:          #092619;
+  --card:        #0F3B2A;
+  --card-inset:  #0A2F20;
+  --line:        #1F4F3A;
+  --line-strong: #2C624A;
+  --ink:         #F1EDE0;
+  --ink-dim:     #AFC5B6;
+  --ink-faint:   #7E9A8B;
+  --blue:        #56A0D6;
+  --blue-deep:   #2E6D9E;
+  --blue-hover:  #397FB5;
+  --yellow:      #E8C766;
+  --gold:        #D9B86A;
+  --pass:        #77C289;
+  --pass-ink:    #9FD8AC;
+  --fail:        #E5765C;
+  --fail-ink:    #F0A08C;
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans:  'IBM Plex Sans', -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --mono:  'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font: 400 14.5px/1.55 var(--sans);
+  background-color: var(--bg);
+  background-image: radial-gradient(1100px 640px at 22% -8%, #14432F 0%, #0C2E20 48%, #092619 100%);
+  background-attachment: fixed;
+}
+::selection { background: rgba(232, 199, 102, 0.28); }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 30px 28px 64px; }
+
+/* Masthead */
+.masthead { border-bottom: 1px solid var(--line-strong); padding-bottom: 22px; }
+.eyebrow {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+}
+.masthead h1 {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0 0 10px;
+  font: 600 34px/1.15 var(--serif);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.ballmark { flex: none; }
+.lede { margin: 0; color: var(--ink-dim); font-size: 15px; max-width: 72ch; }
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 344px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 26px;
+}
+.sidebar { display: grid; gap: 18px; position: sticky; top: 18px; }
+.maincol { display: grid; gap: 30px; }
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+}
+
+/* Cards and section titles */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: inset 0 1px 0 rgba(241, 237, 224, 0.03);
+}
+.card-title {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 13px;
+}
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 0 0 14px;
+  font: 600 21px/1.2 var(--serif);
+  color: var(--ink);
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--line-strong); align-self: center; }
+.section-note { font-size: 13px; color: var(--ink-dim); margin: -6px 0 14px; }
+
+/* Buttons */
+.btn {
+  font: 600 12px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 11px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-faint); background: rgba(241, 237, 224, 0.05); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.btn-primary { background: var(--blue-deep); border-color: var(--blue-deep); color: #FFFFFF; }
+.btn-primary:hover:not(:disabled) { background: var(--blue-hover); border-color: var(--blue-hover); }
+.btn-quiet {
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--blue);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-quiet:hover { color: var(--ink); }
+.btn-quiet:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+
+/* Segmented control */
+.seg { display: flex; border: 1px solid var(--line-strong); border-radius: 7px; overflow: hidden; }
+.seg button {
+  flex: 1;
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 9px 0;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.seg button:last-child { border-right: none; }
+.seg button:hover:not(.active) { background: rgba(241, 237, 224, 0.05); color: var(--ink); }
+.seg button.active { background: var(--blue-deep); color: #FFFFFF; }
+.seg button:focus-visible { outline: 2px solid var(--yellow); outline-offset: -2px; }
+
+/* Form elements */
+textarea {
+  width: 100%;
+  background: var(--card-inset);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  font: 400 13px/1.75 var(--mono);
+  padding: 12px 14px;
+  resize: vertical;
+  min-height: 178px;
+}
+textarea:focus { outline: none; border-color: var(--blue); }
+.hint { font-size: 12px; color: var(--ink-faint); margin: 8px 0 0; line-height: 1.5; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font: 400 13px/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+th {
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-strong);
+}
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: none; }
+.num { text-align: right; }
+
+/* Status chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  border-radius: 99px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.chip-pass { color: var(--pass-ink); border-color: rgba(119, 194, 137, 0.45); background: rgba(119, 194, 137, 0.08); }
+.chip-fail { color: var(--fail-ink); border-color: rgba(229, 118, 92, 0.5); background: rgba(229, 118, 92, 0.1); }
+
+/* Progress meter */
+.progress { height: 8px; background: var(--card-inset); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: var(--blue); transition: width 0.3s ease; }
+
+/* Footer */
+footer {
+  margin-top: 52px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font: 400 11.5px/1.6 var(--mono);
+  color: var(--ink-faint);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">CS 4302 · Mathematics of Computing · UT Dallas</div>
+    <h1>
+      <svg class="ballmark" viewBox="0 0 32 32" width="27" height="27" aria-hidden="true"><circle cx="16" cy="16" r="14.6" fill="#131513" stroke="#F1EDE0" stroke-width="1.4"/><circle cx="16" cy="11.6" r="5.9" fill="#F1EDE0"/><text x="16" y="15" font-size="8.4" font-weight="700" text-anchor="middle" fill="#131513" font-family="Menlo, monospace">8</text></svg>
+      Eight Ball Tournament Scheduler
+    </h1>
+    <p class="lede">Round robin scheduling by the circle method, live Elo driven simulation, and a seeded knockout bracket, built for the tables at the UTD Student Union.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <!-- Roster, controls, and verification cards -->
+    </aside>
+    <div class="maincol" id="maincol">
+      <!-- Standings, schedule, and bracket sections -->
+    </div>
+  </div>
+
+  <!-- Mathematics panel -->
+
+  <footer>
+    Scheduling: circle method (a one factorization of K<sub>n</sub>). Simulation: Elo expectation with calibrated race scores. Knockout: standard seeded single elimination. Built for CS 4302 at UT Dallas.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   CODE MAP
+     1. PURE ALGORITHMS   circle method, schedule verification, Elo,
+                          race score model, bracket seeding. Framed by
+                          ALGO markers so test/algorithms.test.mjs can
+                          run the exact shipped functions in Node.
+     2. ROSTER PARSING    text input to validated player list
+     3. APP STATE         all state lives in memory, no storage APIs
+     4. RENDERING         DOM builders for every panel
+     5. SIMULATION LOOP   timed queue, speeds, pause and resume
+     6. EVENT WIRING      buttons, controls, boot
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   SECTION 1: PURE ALGORITHMS
+   ---------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------
+   SECTION 2: ROSTER PARSING
+   ---------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------
+   SECTION 3: APP STATE
+   ---------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------
+   SECTION 4: RENDERING
+   ---------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------
+   SECTION 5: SIMULATION LOOP
+   ---------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------
+   SECTION 6: EVENT WIRING
+   ---------------------------------------------------------------- */
+</script>
+</body>
+</html>
