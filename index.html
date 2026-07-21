@@ -423,7 +423,7 @@ footer {
       <section class="card">
         <h2 class="card-title">Field of Players</h2>
         <textarea id="roster-input" rows="10" spellcheck="false" autocomplete="off" aria-label="Player roster, one player per line as name comma Elo rating"></textarea>
-        <p class="hint">One player per line as <strong>Name, Elo</strong>. Any count from 4 to 16 works. A name without a rating starts at 1500. Odd counts get a rotating bye.</p>
+        <p class="hint">One player per line as <strong>Name, Elo</strong> (a space before the rating also works). Any count from 4 to 16. A name alone starts at 1500. Odd counts get a rotating bye.</p>
         <div class="errors" id="roster-errors" hidden></div>
         <div class="row-buttons">
           <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
@@ -934,9 +934,10 @@ const DEFAULT_ROSTER = [
 ].join('\n');
 
 /* Turns the textarea contents into a validated player list.
-   Accepts "Name, 1450" or a bare "Name" (defaults to Elo 1500).
-   Returns { players: [{name, elo}], errors: [string] }; the roster
-   is usable only when errors is empty. */
+   Accepts "Name, 1450", "Name 1450" (space before the rating), or a
+   bare "Name" (defaults to Elo 1500). Returns
+   { players: [{name, elo}], errors: [string] }; the roster is usable
+   only when errors is empty. */
 function parseRoster(text) {
   const players = [];
   const errors = [];
@@ -946,8 +947,21 @@ function parseRoster(text) {
     const line = lines[i].trim();
     if (!line) continue;
     const commaAt = line.indexOf(',');
-    const name = commaAt === -1 ? line : line.slice(0, commaAt).trim();
-    const ratingText = commaAt === -1 ? '' : line.slice(commaAt + 1).trim();
+    let name;
+    let ratingText;
+    if (commaAt !== -1) {
+      name = line.slice(0, commaAt).trim();
+      ratingText = line.slice(commaAt + 1).trim();
+    } else {
+      const spaced = line.match(/^(.*\S)\s+(\d+)$/);
+      if (spaced) {
+        name = spaced[1].trim();
+        ratingText = spaced[2];
+      } else {
+        name = line;
+        ratingText = '';
+      }
+    }
     if (!name) { errors.push('Line ' + (i + 1) + ': missing a name.'); continue; }
     if (name.length > 24) { errors.push('Line ' + (i + 1) + ': name is longer than 24 characters.'); continue; }
     let elo = 1500;
