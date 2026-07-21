@@ -424,9 +424,11 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .diagram-controls .btn { padding: 6px 13px; font-size: 14px; }
 .diagram-label { font: 600 12px/1 var(--mono); letter-spacing: 0.06em; color: var(--ink-dim); min-width: 110px; text-align: center; }
 .seat-order { font-family: var(--mono); text-align: center; margin: 0 0 12px; line-height: 1.7; }
-.coverage-line { font-family: var(--mono); text-align: center; margin: -4px 0 6px; }
+.coverage-line { font-family: var(--mono); text-align: center; margin: -4px 0 4px; }
 .coverage-line strong { color: var(--yellow); font-weight: 600; }
 .coverage-line.complete, .coverage-line.complete strong { color: var(--pass-ink); }
+.invariant-line { font-family: var(--mono); text-align: center; margin: 0 0 6px; }
+.invariant-line strong { color: var(--yellow); font-weight: 600; }
 
 /* The diagram's felt table bed and its chalk marks */
 .table-bed { fill: var(--felt); stroke: var(--felt-deep); stroke-width: 3; }
@@ -609,6 +611,7 @@ footer {
           <button class="btn" id="btn-diagram-play" type="button">Play</button>
         </div>
         <p class="fine coverage-line" id="coverage-line"></p>
+        <p class="fine invariant-line" id="invariant-line"></p>
         <p class="fine seat-order" id="seat-order"></p>
         <p class="fine">Vertices are the players, fixed in place; the ringed vertex is the fixed seat, and its
         brighter chord is that player's match, the clock hand of the rotation. Bold chords are this round's
@@ -1572,6 +1575,15 @@ function updateDiagramMeta(r, coveredBefore) {
   if (!diagram.playing) {
     el('btn-diagram-play').textContent = r === s.rounds.length - 1 ? 'Replay' : 'Play';
   }
+
+  /* The residue class this round selects. Ring vertices i, j meet in
+     round r+1 exactly when i + j ≡ -2r (mod n-1): checkable by eye
+     against the chords, and asserted for every field size by the
+     test suite. */
+  const mod = diagram.seats - 1;
+  const residue = ((-2 * r) % mod + mod) % mod;
+  el('invariant-line').innerHTML = 'This round selects i + j ≡ <strong>' + residue + '</strong> (mod ' +
+    mod + '); ' + escapeHtml(playerName(0)) + ' takes the leftover vertex';
 
   /* The full seating list is dial printing: useful at readable
      sizes, clutter at thirty seats. Large fields state the rule
