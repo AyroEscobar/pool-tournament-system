@@ -363,6 +363,37 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .champ-name { font: 600 40px/1.1 var(--serif); color: var(--ink); margin: 6px 0 10px; }
 .champ-line { font: 400 12px/1.6 var(--mono); color: var(--ink-dim); }
 
+/* Mathematics panel */
+#math-section { margin-top: 30px; }
+.math-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 980px) { .math-grid { grid-template-columns: 1fr; } }
+.math-card h3 { font: 600 16.5px/1.3 var(--serif); color: var(--ink); margin: 0 0 9px; }
+.math-card p { font-size: 13.5px; color: var(--ink-dim); margin: 0 0 10px; line-height: 1.68; }
+.math-card p:last-child { margin-bottom: 0; }
+.math-card strong { color: var(--ink); font-weight: 600; }
+.formula {
+  background: var(--card-inset);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 15px;
+  font: 400 12.5px/1.9 var(--mono);
+  color: var(--ink);
+  margin: 10px 0 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.fine { font-size: 12px !important; color: var(--ink-faint) !important; }
+.cite { font-size: 11px !important; color: var(--ink-faint) !important; line-height: 1.7 !important; }
+.fact-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 10px; }
+.fact { background: var(--card-inset); border: 1px solid var(--line); border-radius: 8px; padding: 11px 8px 9px; text-align: center; }
+.fact-value { font: 600 22px/1 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.fact-label { font: 600 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-top: 6px; }
+.diagram-wrap { max-width: 380px; margin: 0 auto; }
+.diagram-wrap svg { width: 100%; height: auto; display: block; }
+.diagram-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 12px; }
+.diagram-controls .btn { padding: 6px 13px; font-size: 14px; }
+.diagram-label { font: 600 12px/1 var(--mono); letter-spacing: 0.06em; color: var(--ink-dim); min-width: 110px; text-align: center; }
+
 /* Footer */
 footer {
   margin-top: 52px;
@@ -464,7 +495,67 @@ footer {
     </div>
   </div>
 
-  <!-- Mathematics panel -->
+  <section id="math-section" hidden>
+    <h2 class="section-title">The Mathematics</h2>
+    <div class="math-grid">
+
+      <div class="card math-card">
+        <h3>The round robin is a one-factorization of K<sub>n</sub></h3>
+        <p>Model the field as the complete graph K<sub>n</sub>: one vertex per player, one edge for every required
+        match. A legal round is a set of matches in which nobody appears twice. In graph terms that is a
+        <strong>perfect matching</strong>, also called a <strong>one-factor</strong>: no player is double booked.
+        A schedule that plays every edge exactly once therefore partitions the edge set of K<sub>n</sub> into
+        rounds, which is a <strong>one-factorization</strong>. The circle method constructs one directly: fix one
+        seat, rotate everyone else one seat per round, and pair opposite seats.</p>
+        <div class="fact-row">
+          <div class="fact"><div class="fact-value" id="fact-n"></div><div class="fact-label">players</div></div>
+          <div class="fact"><div class="fact-value" id="fact-rounds"></div><div class="fact-label">rounds</div></div>
+          <div class="fact"><div class="fact-value" id="fact-perround"></div><div class="fact-label">per round</div></div>
+          <div class="fact"><div class="fact-value" id="fact-total"></div><div class="fact-label">matches</div></div>
+        </div>
+        <p class="fine" id="fact-formula"></p>
+        <p class="fine" id="fact-bye-note"></p>
+      </div>
+
+      <div class="card math-card">
+        <h3>One round, one perfect matching</h3>
+        <div class="diagram-wrap"><svg id="kn-diagram" viewBox="0 0 420 400" role="img" aria-label="The complete graph with the current round's matching highlighted"></svg></div>
+        <div class="diagram-controls">
+          <button class="btn" id="btn-diagram-prev" type="button" aria-label="Previous round">&#8249;</button>
+          <span class="diagram-label" id="diagram-round-label"></span>
+          <button class="btn" id="btn-diagram-next" type="button" aria-label="Next round">&#8250;</button>
+        </div>
+        <p class="fine">The seat with the ring never moves; everyone else rotates one seat per round. Opposite
+        seats play, so each round draws parallel chords: a perfect matching. Faint lines are all the edges of
+        K<sub>n</sub>; stepping through the rounds, the bold chords cover each edge exactly once. A dashed chord
+        marks the bye seat when the field is odd.</p>
+      </div>
+
+      <div class="card math-card">
+        <h3>Elo expectation and update</h3>
+        <div class="formula">E_A = 1 / (1 + 10^((R_B - R_A) / 400))<br>R_new = R_old + K (S - E),&nbsp;&nbsp;K = 32,&nbsp;&nbsp;S = 1 win, 0 loss</div>
+        <p id="elo-example"></p>
+        <p class="fine">Every simulated match draws its winner from exactly these odds. The race score model then
+        finds the per rack probability whose race outcome matches E, so favorites usually win, upsets stay
+        possible, and scorelines look like real pool.</p>
+      </div>
+
+      <div class="card math-card">
+        <h3>Seeding the knockout</h3>
+        <p id="seed-explain"></p>
+        <h3 style="margin-top: 16px;">A known limitation, acknowledged</h3>
+        <p>If B meets A immediately after A faced C, B is said to receive a <strong>carry-over effect</strong>
+        from C, for example facing an opponent right after a bruising loss. A schedule is considered balanced
+        when these effects spread evenly. The circle method does the opposite: it attains the maximum possible
+        carry-over effect value, and every schedule with maximum carry-over arises from the circle method. For a
+        student union tournament this is an acceptable trade for simplicity, but fairer constructions exist,
+        such as Russell's designs, balanced whenever n is a power of two.</p>
+        <p class="cite">K. G. Russell, Balancing carry-over effects in round robin tournaments, Biometrika 67 (1980) 127-131.<br>
+        E. Lambrechts, A. M. C. Ficker, D. R. Goossens, F. C. R. Spieksma, Round-robin tournaments generated by the circle method have maximum carry-over, Mathematical Programming 172 (2018) 277-302.</p>
+      </div>
+
+    </div>
+  </section>
 
   <footer>
     Scheduling: circle method (a one factorization of K<sub>n</sub>). Simulation: Elo expectation with calibrated race scores. Knockout: standard seeded single elimination. Built for CS 4302 at UT Dallas.
@@ -886,7 +977,8 @@ const state = {
   players: [],      // [{id, name, elo, startElo, wins, losses, played}]
   schedule: null,   // output of buildSchedule
   bracket: null,    // built after the group stage completes
-  phase: 'setup'    // setup | ready | group | seeding | bracket | done
+  phase: 'setup',   // setup | ready | group | bracket | done
+  diagramRound: 0   // round shown in the K_n matching diagram
 };
 
 function el(id) { return document.getElementById(id); }
@@ -1058,6 +1150,120 @@ function renderChampion() {
     '<div class="champ-name">' + escapeHtml(champ.name) + '</div>' +
     '<div class="champ-line">Seed ' + seed + ' · group record ' + champ.wins + '-' + champ.losses +
     ' · final Elo ' + Math.round(champ.elo) + '</div>';
+}
+
+/* Fills the mathematics panel with live numbers from the current
+   roster: the counting facts, an Elo worked example using the two
+   strongest entered ratings, and the seeding placement. */
+function renderMathPanel() {
+  const N = state.players.length;
+  const s = state.schedule;
+  const perRound = Math.floor(N / 2);
+  const total = N * (N - 1) / 2;
+  el('fact-n').textContent = N;
+  el('fact-rounds').textContent = s.rounds.length;
+  el('fact-perround').textContent = perRound;
+  el('fact-total').textContent = total;
+  el('fact-formula').textContent = 'Check: n(n-1)/2 = ' + N + ' × ' + (N - 1) + ' / 2 = ' + total +
+    ' matches, spread over ' + s.rounds.length + ' rounds of ' + perRound + '.';
+  el('fact-bye-note').textContent = s.hasBye
+    ? 'Odd field: a phantom bye seat makes the seat count even, so this schedule is a one-factorization of K_' +
+      s.seatCount + ', and whoever pairs with the phantom rests that round.'
+    : '';
+
+  const sorted = state.players.slice().sort(function (x, y) { return y.startElo - x.startElo; });
+  const A = sorted[0];
+  const B = sorted[1];
+  const E = eloExpected(A.startElo, B.startElo);
+  el('elo-example').innerHTML = 'Worked example from this roster: <strong>' + escapeHtml(A.name) + ' (' +
+    A.startElo + ')</strong> vs <strong>' + escapeHtml(B.name) + ' (' + B.startElo + ')</strong>. E for ' +
+    escapeHtml(A.name) + ' = 1 / (1 + 10^((' + B.startElo + ' - ' + A.startElo + ') / 400)) = ' + E.toFixed(3) +
+    '. A win for ' + escapeHtml(A.name) + ' transfers 32 × (1 - ' + E.toFixed(3) + ') = ' +
+    (ELO_K * (1 - E)).toFixed(1) + ' points from ' + escapeHtml(B.name) + '; a win for ' + escapeHtml(B.name) +
+    ' transfers 32 × ' + E.toFixed(3) + ' = ' + (ELO_K * E).toFixed(1) +
+    ' points the other way. The favorite should take about ' + Math.round(E * 100) +
+    ' of 100 meetings, which leaves real room for upsets.';
+
+  const k = qualifierCount(N);
+  const order = seedOrder(k);
+  const pairs = [];
+  for (let i = 0; i < order.length; i += 2) pairs.push(order[i] + ' vs ' + order[i + 1]);
+  el('seed-explain').innerHTML = 'After the group stage, the top ' + k +
+    ' by standings (wins, then Elo) enter the knockout. The bracket is a complete binary tree: leaves are ' +
+    'seeds, internal nodes are matches, the root is the final. Placement follows <strong>seedOrder(' + k +
+    ') = [' + order.join(', ') + ']</strong>, read pairwise as ' + pairs.join(', ') +
+    '. Every first round pairing sums to ' + (k + 1) +
+    ', the strongest against the weakest, and seeds 1 and 2 sit in opposite halves, so the earliest they can meet is the final. That protection is the reward for winning the group.';
+}
+
+/* K_n matching diagram. Seats sit on a circle; the ringed seat is
+   the fixed one. Faint lines draw every edge of K_n, bold chalk
+   chords draw this round's matching, and a dashed chord marks the
+   bye pairing when the field is odd. */
+function seatPoint(i, seats, radius) {
+  const angle = -Math.PI / 2 + (i * 2 * Math.PI) / seats;
+  return {
+    x: 210 + radius * Math.cos(angle),
+    y: 200 + radius * Math.sin(angle),
+    cos: Math.cos(angle),
+    sin: Math.sin(angle)
+  };
+}
+
+function renderDiagram() {
+  const s = state.schedule;
+  const seats = s.seatCount;
+  const r = state.diagramRound;
+  const seatedIds = s.arrangements[r];
+  const R = 122;
+  const parts = [];
+
+  for (let i = 0; i < seats; i++) {
+    for (let j = i + 1; j < seats; j++) {
+      const p = seatPoint(i, seats, R);
+      const q = seatPoint(j, seats, R);
+      parts.push('<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) +
+        '" y2="' + q.y.toFixed(1) + '" stroke="#F1EDE0" stroke-opacity="0.055" stroke-width="1"/>');
+    }
+  }
+
+  for (let i = 0; i < seats / 2; i++) {
+    const j = seats - 1 - i;
+    const p = seatPoint(i, seats, R);
+    const q = seatPoint(j, seats, R);
+    const isBye = seatedIds[i] === BYE || seatedIds[j] === BYE;
+    parts.push('<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + q.x.toFixed(1) +
+      '" y2="' + q.y.toFixed(1) + '" stroke="' + (isBye ? '#7E9A8B' : '#E8C766') +
+      '" stroke-width="2.2" stroke-linecap="round"' + (isBye ? ' stroke-dasharray="5 5"' : '') + '/>');
+  }
+
+  for (let i = 0; i < seats; i++) {
+    const p = seatPoint(i, seats, R);
+    const occupant = seatedIds[i];
+    const isBye = occupant === BYE;
+    parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4.2" fill="' +
+      (isBye ? '#7E9A8B' : '#F1EDE0') + '"/>');
+    if (i === 0) {
+      parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) +
+        '" r="8.6" fill="none" stroke="#E8C766" stroke-width="1.5"/>');
+    }
+    const lp = seatPoint(i, seats, R + 25);
+    let anchor = 'middle';
+    if (lp.cos > 0.35) anchor = 'start';
+    else if (lp.cos < -0.35) anchor = 'end';
+    let label = isBye ? 'bye' : playerName(occupant);
+    const maxLen = seats > 10 ? 8 : 12;
+    if (label.length > maxLen) label = label.slice(0, maxLen - 1) + '…';
+    parts.push('<text x="' + lp.x.toFixed(1) + '" y="' + (lp.y + 4).toFixed(1) + '" text-anchor="' + anchor +
+      '" font-family="IBM Plex Mono, Menlo, monospace" font-size="11.5" fill="' +
+      (isBye ? '#7E9A8B' : '#AFC5B6') + '"' + (isBye ? ' font-style="italic"' : '') + '>' +
+      escapeHtml(label) + '</text>');
+  }
+
+  el('kn-diagram').innerHTML = parts.join('');
+  el('diagram-round-label').textContent = 'Round ' + (r + 1) + ' of ' + s.rounds.length;
+  el('btn-diagram-prev').disabled = r === 0;
+  el('btn-diagram-next').disabled = r === s.rounds.length - 1;
 }
 
 function renderVerification() {
@@ -1383,10 +1589,14 @@ function handleGenerate() {
   el('bracket-section').hidden = true;
   el('bracket-grid').innerHTML = '';
   el('champion-banner').hidden = true;
+  el('math-section').hidden = false;
+  state.diagramRound = 0;
   renderGroupNote();
   renderSchedule();
   renderVerification();
   renderStandings(null);
+  renderMathPanel();
+  renderDiagram();
   sim.completed = 0;
   sim.totalMatches = totalMatchTarget(state.players.length);
   renderProgress();
@@ -1406,6 +1616,15 @@ el('btn-pause').addEventListener('click', function () {
     scheduleNext(false);
   }
   updateControls();
+});
+el('btn-diagram-prev').addEventListener('click', function () {
+  if (state.diagramRound > 0) { state.diagramRound--; renderDiagram(); }
+});
+el('btn-diagram-next').addEventListener('click', function () {
+  if (state.schedule && state.diagramRound < state.schedule.rounds.length - 1) {
+    state.diagramRound++;
+    renderDiagram();
+  }
 });
 el('speed-seg').addEventListener('click', function (event) {
   const button = event.target.closest('button[data-speed]');
