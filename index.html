@@ -441,7 +441,7 @@ footer {
       <section class="card">
         <h2 class="card-title">Field of Players</h2>
         <textarea id="roster-input" rows="10" spellcheck="false" autocomplete="off" aria-label="Player roster, one player per line as name comma Elo rating"></textarea>
-        <p class="hint">One player per line as <strong>Name, Elo</strong> (a space before the rating also works). Any count from 4 to 16. A name alone starts at 1500. Odd counts get a rotating bye.</p>
+        <p class="hint">One player per line as <strong>Name, Elo</strong> (a space before the rating also works). Any count from 4 to 30. A name alone starts at 1500. Odd counts get a rotating bye.</p>
         <div class="errors" id="roster-errors" hidden></div>
         <div class="row-buttons">
           <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
@@ -1004,7 +1004,7 @@ function parseRoster(text) {
     players.push({ name: name, elo: elo });
   }
   if (players.length < 4) errors.push('Need at least 4 players, found ' + players.length + '.');
-  if (players.length > 16) errors.push('Supports at most 16 players, found ' + players.length + '.');
+  if (players.length > 30) errors.push('Supports at most 30 players, found ' + players.length + '.');
   return { players: players, errors: errors };
 }
 
