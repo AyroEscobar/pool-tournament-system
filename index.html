@@ -208,6 +208,13 @@ tr:last-child td { border-bottom: none; }
 
 /* Roster card */
 .row-buttons { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 13px; }
+.preset-row { display: flex; align-items: center; gap: 9px; }
+.preset-label {
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
 .errors {
   margin-top: 11px;
   padding: 10px 13px;
@@ -445,7 +452,12 @@ footer {
         <div class="errors" id="roster-errors" hidden></div>
         <div class="row-buttons">
           <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
-          <button class="btn-quiet" id="btn-restore" type="button">restore default field</button>
+          <div class="preset-row" id="preset-row" role="group" aria-label="Load an example field">
+            <span class="preset-label">examples</span>
+            <button class="btn-quiet" type="button" data-preset="8">8</button>
+            <button class="btn-quiet" type="button" data-preset="13">13</button>
+            <button class="btn-quiet" type="button" data-preset="30">30</button>
+          </div>
         </div>
       </section>
 
@@ -954,6 +966,44 @@ const DEFAULT_ROSTER = [
   'Sofia, 1333',
   'Kenji, 1240'
 ].join('\n');
+
+/* Example fields at three scales: the default eight, a thirteen
+   player field (odd, so it exercises the rotating bye and the top 8
+   cut), and a thirty player full hall. */
+const PRESET_ROSTERS = {
+  8: DEFAULT_ROSTER,
+  13: DEFAULT_ROSTER + '\n' + [
+    'Lena, 1521',
+    'Omar, 1583',
+    'Bea, 1294',
+    'Cruz, 1466',
+    'Nadia, 1602'
+  ].join('\n'),
+  30: DEFAULT_ROSTER + '\n' + [
+    'Lena, 1521',
+    'Omar, 1583',
+    'Bea, 1294',
+    'Cruz, 1466',
+    'Nadia, 1602',
+    'Theo, 1379',
+    'Rosa, 1352',
+    'Hugo, 1431',
+    'Wren, 1518',
+    'Malik, 1567',
+    'Ines, 1290',
+    'Dario, 1476',
+    'Yuki, 1543',
+    'Blake, 1265',
+    'Amara, 1620',
+    'Felix, 1359',
+    'Noor, 1489',
+    'Silas, 1417',
+    'Tessa, 1224',
+    'Rafael, 1571',
+    'Mei, 1506',
+    'Jonas, 1338'
+  ].join('\n')
+};
 
 /* Turns the textarea contents into a validated player list.
    Accepts "Name, 1450", "Name 1450" (space before the rating), or a
@@ -1699,9 +1749,11 @@ el('speed-seg').addEventListener('click', function (event) {
   for (const b of buttons) b.classList.toggle('active', b === button);
   if (sim.running && !sim.paused) scheduleNext(false);
 });
-el('btn-restore').addEventListener('click', function () {
-  el('roster-input').value = DEFAULT_ROSTER;
-  renderRosterErrors([]);
+el('preset-row').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-preset]');
+  if (!button) return;
+  el('roster-input').value = PRESET_ROSTERS[button.dataset.preset];
+  handleGenerate();
 });
 
 /* Boot: load the default field and generate its schedule right away,
