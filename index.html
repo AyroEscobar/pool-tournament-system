@@ -206,6 +206,16 @@ tr:last-child td { border-bottom: none; }
 }
 .errors div::before { content: '\2717\00a0\00a0'; }
 
+/* Verification panel */
+.vcheck { display: flex; gap: 10px; align-items: flex-start; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+.vcheck:last-child { border-bottom: none; }
+.vcheck .chip { margin-top: 1px; }
+.vlabel { font-size: 12.5px; color: var(--ink); line-height: 1.4; }
+.vdetail { font: 400 11px/1.5 var(--mono); color: var(--ink-faint); margin-top: 2px; }
+.verify-summary { margin-top: 12px; font: 600 12px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.verify-summary.ok { color: var(--pass-ink); }
+.verify-summary.bad { color: var(--fail-ink); }
+
 /* Status chips */
 .chip {
   display: inline-flex;
@@ -302,6 +312,13 @@ footer {
           <button class="btn btn-primary" id="btn-generate">Generate Schedule</button>
           <button class="btn-quiet" id="btn-restore" type="button">restore default field</button>
         </div>
+      </section>
+
+      <section class="card" id="verify-card" hidden>
+        <h2 class="card-title">Schedule Verification</h2>
+        <p class="hint" style="margin: -4px 0 6px;">Each property is recomputed from the generated schedule, not assumed.</p>
+        <div id="verify-list"></div>
+        <div class="verify-summary" id="verify-summary"></div>
       </section>
 
     </aside>
@@ -428,6 +445,100 @@ function buildSchedule(playerCount) {
   };
 }
 
+/* SCHEDULE VERIFICATION
+
+   Recomputes, from the generated schedule alone, the properties the
+   circle method is supposed to guarantee. The UI reports each check
+   as pass or fail, so correctness is demonstrated rather than
+   asserted. Byes are rest entries, not matches, and are excluded
+   from match counts. */
+function verifySchedule(s) {
+  const N = s.playerCount;
+  const expectedPairs = N * (N - 1) / 2;
+  const checks = [];
+
+  /* 1. Every pair of real players meets exactly once. */
+  const pairCounts = new Map();
+  let repeats = 0;
+  for (const round of s.rounds) {
+    for (const m of round) {
+      if (m.bye !== undefined) continue;
+      const key = Math.min(m.a, m.b) + ':' + Math.max(m.a, m.b);
+      const c = (pairCounts.get(key) || 0) + 1;
+      pairCounts.set(key, c);
+      if (c === 2) repeats++;
+    }
+  }
+  checks.push({
+    label: 'Every pair meets exactly once',
+    pass: repeats === 0 && pairCounts.size === expectedPairs,
+    detail: pairCounts.size + ' of ' + expectedPairs + ' distinct pairings scheduled, ' +
+      (repeats ? repeats + ' repeated' : 'none repeated')
+  });
+
+  /* 2. Each round is a perfect matching over the seats: nobody
+        appears twice, and everyone is accounted for (playing, or
+        resting on the bye). */
+  let doubleBooked = 0;
+  let incompleteRounds = 0;
+  for (const round of s.rounds) {
+    const inRound = new Set();
+    for (const m of round) {
+      const ids = m.bye !== undefined ? [m.bye] : [m.a, m.b];
+      for (const p of ids) {
+        if (inRound.has(p)) doubleBooked++;
+        inRound.add(p);
+      }
+    }
+    if (inRound.size !== N) incompleteRounds++;
+  }
+  checks.push({
+    label: 'No player plays twice in a round',
+    pass: doubleBooked === 0 && incompleteRounds === 0,
+    detail: doubleBooked === 0 && incompleteRounds === 0
+      ? 'each round covers all ' + N + ' players exactly once'
+      : doubleBooked + ' double bookings, ' + incompleteRounds + ' incomplete rounds'
+  });
+
+  /* 3. Round count: n-1 for even n, n when a bye seat was added. */
+  const expectedRounds = s.hasBye ? N : N - 1;
+  checks.push({
+    label: 'Round count matches the theory',
+    pass: s.rounds.length === expectedRounds,
+    detail: s.rounds.length + ' rounds, expected ' + expectedRounds +
+      (s.hasBye ? ' (n rounds when n is odd)' : ' (n-1 rounds when n is even)')
+  });
+
+  /* 4. Total real matches equal n(n-1)/2. */
+  let totalMatches = 0;
+  for (const round of s.rounds) {
+    for (const m of round) if (m.bye === undefined) totalMatches++;
+  }
+  checks.push({
+    label: 'Total matches equal n(n-1)/2',
+    pass: totalMatches === expectedPairs,
+    detail: totalMatches + ' matches, expected ' + N + ' x ' + (N - 1) + ' / 2 = ' + expectedPairs
+  });
+
+  /* 5. Every round fields the same match count, floor(n/2). */
+  const perRound = Math.floor(N / 2);
+  let offRounds = 0;
+  for (const round of s.rounds) {
+    let c = 0;
+    for (const m of round) if (m.bye === undefined) c++;
+    if (c !== perRound) offRounds++;
+  }
+  checks.push({
+    label: 'Every round fields ' + perRound + ' matches',
+    pass: offRounds === 0,
+    detail: offRounds === 0
+      ? perRound + ' matches in each of the ' + s.rounds.length + ' rounds'
+      : offRounds + ' rounds have the wrong count'
+  });
+
+  return checks;
+}
+
 // [ALGO:END]
 
 /* ----------------------------------------------------------------
@@ -519,6 +630,23 @@ function renderRosterErrors(errors) {
 
 function playerName(id) { return state.players[id].name; }
 
+function renderVerification() {
+  const checks = verifySchedule(state.schedule);
+  const rows = checks.map(function (c) {
+    const chip = c.pass
+      ? '<span class="chip chip-pass">✓ pass</span>'
+      : '<span class="chip chip-fail">✗ fail</span>';
+    return '<div class="vcheck">' + chip +
+      '<div><div class="vlabel">' + escapeHtml(c.label) + '</div>' +
+      '<div class="vdetail">' + escapeHtml(c.detail) + '</div></div></div>';
+  });
+  el('verify-list').innerHTML = rows.join('');
+  const passed = checks.filter(function (c) { return c.pass; }).length;
+  const summary = el('verify-summary');
+  summary.textContent = passed + ' of ' + checks.length + ' checks pass';
+  summary.className = 'verify-summary ' + (passed === checks.length ? 'ok' : 'bad');
+}
+
 /* Headline numbers for the group stage, straight from the theory:
    n-1 rounds (or n with a bye), floor(n/2) matches per round,
    n(n-1)/2 matches overall. */
@@ -592,8 +720,10 @@ function handleGenerate() {
   state.bracket = null;
   state.phase = 'ready';
   el('group-section').hidden = false;
+  el('verify-card').hidden = false;
   renderGroupNote();
   renderSchedule();
+  renderVerification();
 }
 
 el('btn-generate').addEventListener('click', handleGenerate);
