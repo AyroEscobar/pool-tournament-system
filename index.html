@@ -34,7 +34,7 @@
   --steel-hover: #31342C;
   --steel-ink:   #F4F1E6;
   --yellow:      #E8C766;
-  --gold:        #8A6A1E;
+  --gold:        #94690C;
   --pass:        #2E7D46;
   --pass-ink:    #256B3D;
   --fail:        #B0472B;
@@ -238,7 +238,7 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
   font: 600 10px/1 var(--mono);
   letter-spacing: 0.05em;
   color: var(--gold);
-  border: 1px solid rgba(138, 106, 30, 0.45);
+  border: 1px solid rgba(148, 105, 12, 0.45);
   border-radius: 99px;
   padding: 2px 7px;
   margin-left: 8px;
@@ -317,7 +317,7 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .m-score { flex: none; min-width: 44px; text-align: center; color: var(--ink-faint); font-size: 11px; }
 .match .won { color: var(--gold); font-weight: 600; }
 .match .lost { color: var(--ink-faint); }
-.match.playing { background: rgba(138, 106, 30, 0.09); }
+.match.playing { background: rgba(148, 105, 12, 0.09); }
 .match.just { animation: matchflash 1.1s ease-out; }
 @keyframes matchflash { from { background: rgba(200, 162, 66, 0.28); } to { background: transparent; } }
 .match.bye-row { color: var(--ink-faint); font-size: 12px; }
@@ -367,8 +367,8 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 /* Champion banner */
 .champion-banner {
   margin-top: 24px;
-  border: 1px solid rgba(138, 106, 30, 0.45);
-  background: rgba(138, 106, 30, 0.06);
+  border: 1px solid rgba(148, 105, 12, 0.45);
+  background: rgba(148, 105, 12, 0.06);
   border-radius: 12px;
   padding: 28px 22px 26px;
   text-align: center;
@@ -1321,7 +1321,7 @@ function renderChampion() {
   banner.hidden = false;
   banner.innerHTML =
     '<div class="champ-eyebrow">Tournament Champion</div>' +
-    '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><circle cx="16" cy="16" r="14.6" fill="#131513" stroke="#8A6A1E" stroke-width="1.4"/><circle cx="16" cy="11.6" r="5.9" fill="#F1EDE0"/><text x="16" y="15" font-size="8.4" font-weight="700" text-anchor="middle" fill="#131513" font-family="Menlo, monospace">8</text></svg>' +
+    '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><circle cx="16" cy="16" r="14.6" fill="#131513" stroke="#94690C" stroke-width="1.4"/><circle cx="16" cy="11.6" r="5.9" fill="#F1EDE0"/><text x="16" y="15" font-size="8.4" font-weight="700" text-anchor="middle" fill="#131513" font-family="Menlo, monospace">8</text></svg>' +
     '<div class="champ-name">' + escapeHtml(champ.name) + '</div>' +
     '<div class="champ-line">Seed ' + seed + ' · group record ' + champ.wins + '-' + champ.losses +
     ' · final Elo ' + Math.round(champ.elo) + '</div>' +
