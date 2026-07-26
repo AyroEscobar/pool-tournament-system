@@ -2298,9 +2298,9 @@ function walkActRoundRobin() {
     {
       act: A, kicker: 'Round robin, done',
       title: 'Coverage complete, and verified',
-      narr: '<p>All 15 edges of K₆ are inked exactly once: a one-factorization built and confirmed. The scale-up is free. The app just did this for your real field, and the <strong>Schedule Verification</strong> panel recomputes all five structural properties from the generated schedule and reports pass or fail, so correctness is demonstrated, not assumed.</p>' +
-        '<p>Odd fields add a phantom bye seat, making a one-factorization of K with one more vertex, and whoever pairs with the phantom simply rests that round.</p>',
-      math: 'edges drawn <span class="win">15 / 15</span>, each exactly once<br>verifier: <span class="win">5 of 5 checks pass</span>',
+      narr: '<p>All 15 edges of K₆ are inked exactly once: a one-factorization built and confirmed. It is one of exactly <strong>6</strong> distinct one-factorizations K₆ has (K₈ has 6240), so the circle method is one systematic route through a rich combinatorial space. The scale-up is free: the app just did this for your real field, and the <strong>Schedule Verification</strong> panel recomputes all five properties and reports pass or fail, so correctness is demonstrated, not assumed.</p>' +
+        '<p>Why no byes here, but byes for odd fields? Because a round robin is an <strong>edge coloring</strong> of Kₙ, one color per round. For even n the chromatic index χ′(Kₙ) is n-1, so n-1 rounds suffice with nobody idle. For odd n it jumps to n: <span class="hl">every round must leave one player out</span>, so the app adds a phantom bye and each player rests exactly once.</p>',
+      math: 'edges drawn <span class="win">15 / 15</span>, each exactly once, verifier <span class="win">5 of 5</span><br>χ′(Kₙ) = n-1 for even n (no byes), = n for odd n (a forced bye each round)',
       view: function () { return walkKnSvg({ coverageComplete: true }); }
     }
   ];
@@ -2432,8 +2432,9 @@ function walkActBracket() {
       act: A, kicker: 'Knockout tree, step 1',
       title: 'The top finishers seed a binary tree',
       narr: '<p>The group stage ranks everyone. The top 8 by standings (wins, then Elo) advance to a <strong>single-elimination knockout</strong>, which is a <strong>complete binary tree</strong>: the 8 seeds are the leaves, every internal node is a match, and the root is the final.</p>' +
-        '<p>Counting is immediate: 8 leaves collapse to 1 champion, and each match removes exactly one player, so there are 8 - 1 = <span class="hl">7 matches</span>. Every knockout of k players is k - 1 matches, the cleanest counting argument in the whole system.</p>',
-      math: '8 leaves, 7 internal matches, 1 root (the final)<br>matches = k - 1 = <span class="accent">7</span> (each match eliminates one player)',
+        '<p>Counting is immediate: 8 leaves collapse to 1 champion, and each match removes exactly one player, so there are 8 - 1 = <span class="hl">7 matches</span>. Every knockout of k players is k - 1 matches, the cleanest counting argument in the whole system.</p>' +
+        '<p>Real pool usually runs <strong>double elimination</strong> instead, a second life where you must lose twice to be out. Same loss-counting logic: k - 1 players each take 2 losses, so it is 2k - 2 matches (2k - 1 if the final resets). Here we use single elimination for a clean tree.</p>',
+      math: 'single elim: matches = k - 1 = <span class="accent">7</span> (each removes one player)<br>double elim: 2k - 2 = 14, since k - 1 players take 2 losses each',
       view: function () { return walkTreeSvg(null, null); }
     },
     {
