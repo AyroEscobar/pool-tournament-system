@@ -1114,6 +1114,29 @@ function bracketRoundNames(k) {
   return names;
 }
 
+/* Earliest round two seeds can meet if both keep winning.
+
+   Two seeds sit at leaf positions of a complete binary tree of
+   depth log2(k). They first share a subtree, and so can first meet,
+   at the height of their lowest common ancestor. In a tree whose
+   leaves are numbered by their position in seedOrder(k), that height
+   is one plus the index of the highest bit in which the two leaf
+   positions differ. Rounds are numbered from 1 (the first round at
+   the leaves) up to log2(k) (the final), so the result is exactly
+   that height. Returns 0 for a seed against itself.
+
+   This is the distance property behind seeding: the top 2^t seeds
+   land in 2^t different subtrees, so no two of them can meet before
+   the round with 2^t players left. In particular seeds 1 and 2 can
+   only meet in the final. */
+function seedMeetRound(k, a, b) {
+  const order = seedOrder(k);
+  let x = order.indexOf(a) ^ order.indexOf(b);
+  let round = 0;
+  while (x > 0) { x = x >> 1; round++; }
+  return round;
+}
+
 // [ALGO:END]
 
 /* ----------------------------------------------------------------

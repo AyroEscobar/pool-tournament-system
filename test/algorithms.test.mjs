@@ -16,7 +16,8 @@ if (begin === -1 || end === -1) throw new Error('ALGO markers not found in index
 const algo = new Function(html.slice(begin, end) + `
   return { BYE, buildSchedule, verifySchedule, eloExpected, eloDelta,
            raceWinProbability, rackProbabilityFor, simulateMatch,
-           seedOrder, qualifierCount, buildBracket, bracketRoundNames };
+           seedOrder, qualifierCount, buildBracket, bracketRoundNames,
+           seedMeetRound };
 `)();
 
 let checks = 0;
@@ -173,6 +174,29 @@ assertEqual(bracket8.rounds.map(r => r.length), [4, 2, 1], 'k=8 bracket shape');
 assertEqual(bracket8.rounds[0].map(m => [m.a, m.b]), [[1, 8], [4, 5], [2, 7], [3, 6]], 'k=8 quarterfinal pairings');
 assertEqual(algo.bracketRoundNames(8), ['Quarterfinals', 'Semifinals', 'Final'], 'round names for 8');
 assertEqual(algo.bracketRoundNames(4), ['Semifinals', 'Final'], 'round names for 4');
+
+/* ---- Seed meeting-round distance property ---- */
+console.log('Seed meeting rounds');
+assertEqual(algo.seedMeetRound(8, 1, 8), 1, 'seeds 1 and 8 meet in round 1 (k=8)');
+assertEqual(algo.seedMeetRound(8, 1, 4), 2, 'seeds 1 and 4 meet no earlier than the semifinals');
+assertEqual(algo.seedMeetRound(8, 1, 2), 3, 'seeds 1 and 2 can only meet in the final (k=8)');
+assertEqual(algo.seedMeetRound(4, 1, 4), 1, 'seeds 1 and 4 meet in round 1 (k=4)');
+assertEqual(algo.seedMeetRound(4, 1, 2), 2, 'seeds 1 and 2 can only meet in the final (k=4)');
+assertEqual(algo.seedMeetRound(8, 3, 3), 0, 'a seed never meets itself');
+for (const k of [4, 8, 16]) {
+  const depth = Math.round(Math.log2(k));
+  assertEqual(algo.seedMeetRound(k, 1, 2), depth, 'seeds 1 and 2 meet in the final for k=' + k);
+  const order = algo.seedOrder(k);
+  for (let i = 0; i < k; i += 2) {
+    assertEqual(algo.seedMeetRound(k, order[i], order[i + 1]), 1,
+      'a first round pair meets in round 1 for k=' + k);
+  }
+  /* The final is the latest any pair can meet. */
+  let maxRound = 0;
+  for (let a = 1; a <= k; a++)
+    for (let b = a + 1; b <= k; b++) maxRound = Math.max(maxRound, algo.seedMeetRound(k, a, b));
+  assertEqual(maxRound, depth, 'no pair meets later than the final for k=' + k);
+}
 
 console.log('');
 console.log(failures === 0
