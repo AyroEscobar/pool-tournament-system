@@ -1137,6 +1137,54 @@ function seedMeetRound(k, a, b) {
   return round;
 }
 
+/* CARRY-OVER EFFECT
+
+   Player j gives a carry-over to player k when some player i faces j
+   in one round and k in the very next round: i arrives at k in
+   whatever state facing j left them in. Reading each player's
+   opponent sequence and wrapping the last round back to the first,
+   we tally an n x n matrix G where G[j][k] counts those handoffs.
+
+   For an even field every player has n-1 opponents over n-1 rounds,
+   so there are exactly n(n-1) handoffs and the entries sum to
+   n(n-1). A perfectly balanced schedule spreads them so every
+   off-diagonal entry is 1; the "value" that measures imbalance is
+   the sum of squares of the entries, minimized (n(n-1)) by a
+   balanced schedule and, by Lambrechts, Ficker, Goossens and
+   Spieksma (2018), MAXIMIZED by the circle method. Byes (odd
+   fields) carry no opponent, so handoffs touching a rest are
+   skipped. */
+function carryOverMatrix(schedule) {
+  const N = schedule.playerCount;
+  const R = schedule.rounds.length;
+  const opp = [];
+  for (let i = 0; i < N; i++) opp.push(new Array(R).fill(null));
+  schedule.rounds.forEach(function (round, r) {
+    for (const m of round) {
+      if (m.bye !== undefined) continue;
+      opp[m.a][r] = m.b;
+      opp[m.b][r] = m.a;
+    }
+  });
+  const G = [];
+  for (let i = 0; i < N; i++) G.push(new Array(N).fill(0));
+  for (let i = 0; i < N; i++) {
+    for (let r = 0; r < R; r++) {
+      const j = opp[i][r];
+      const k = opp[i][(r + 1) % R];
+      if (j !== null && k !== null && j !== k) G[j][k]++;
+    }
+  }
+  return G;
+}
+
+function carryOverValue(schedule) {
+  const G = carryOverMatrix(schedule);
+  let v = 0;
+  for (const row of G) for (const x of row) v += x * x;
+  return v;
+}
+
 // [ALGO:END]
 
 /* ----------------------------------------------------------------

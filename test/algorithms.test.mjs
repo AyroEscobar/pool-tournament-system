@@ -17,7 +17,7 @@ const algo = new Function(html.slice(begin, end) + `
   return { BYE, buildSchedule, verifySchedule, eloExpected, eloDelta,
            raceWinProbability, rackProbabilityFor, simulateMatch,
            seedOrder, qualifierCount, buildBracket, bracketRoundNames,
-           seedMeetRound };
+           seedMeetRound, carryOverMatrix, carryOverValue };
 `)();
 
 let checks = 0;
@@ -114,6 +114,29 @@ const corrupted = algo.buildSchedule(8);
 corrupted.rounds[0][1].a = corrupted.rounds[0][0].a;
 assert(algo.verifySchedule(corrupted).some(c => !c.pass),
   'verifySchedule should flag a corrupted schedule');
+
+/* ---- Carry-over effect ---- */
+console.log('Carry-over effect');
+for (const N of [4, 6, 8, 10]) {
+  const s = algo.buildSchedule(N);
+  const G = algo.carryOverMatrix(s);
+  assertEqual(G.length, N, 'carry-over matrix is N x N (N=' + N + ')');
+  let sum = 0;
+  let diag = 0;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) { sum += G[i][j]; if (i === j) diag += G[i][j]; }
+  }
+  /* Even fields: every player hands off n-1 times, so the entries
+     sum to exactly n(n-1) and the diagonal is empty. */
+  assertEqual(sum, N * (N - 1), 'carry-over handoffs total n(n-1) (N=' + N + ')');
+  assertEqual(diag, 0, 'no player hands a carry-over to itself (N=' + N + ')');
+  /* Balanced lower bound is n(n-1); the circle method meets it only
+     at the degenerate n=4 and exceeds it (is unbalanced) from n=6. */
+  const value = algo.carryOverValue(s);
+  assert(value >= N * (N - 1), 'carry-over value at least the balanced minimum (N=' + N + ')');
+  if (N === 4) assertEqual(value, 12, 'n=4 circle method is balanced, value 12');
+  if (N >= 6) assert(value > N * (N - 1), 'circle method is unbalanced from n=6 (N=' + N + ')');
+}
 
 /* ---- Elo ---- */
 console.log('Elo rating system');
