@@ -1,10 +1,10 @@
 # Pool Tournament Scheduler
 
-A single file web app that schedules and simulates a complete eight ball tournament: a circle method round robin group stage, live Elo driven match simulation, and a seeded single elimination bracket.
+A single file web app that schedules and simulates a complete eight ball tournament: a circle method round robin group stage, live Elo driven match simulation, and a seeded single elimination bracket. A built in guided walkthrough teaches the two discrete math algorithms behind it, step by step, on a small worked field.
 
 Built for CS 4302 (Mathematics of Computing) at UT Dallas. The eventual real world use is running a pool tournament at the UTD Student Union.
 
-![The app as it opens: generated schedule, passing verification panel, and the mathematics panel with the K_n matching diagram](docs/screenshot.png)
+![The app as it opens: generated schedule, passing verification panel, standings, and the group stage, with a guided walkthrough and live mathematics panel further down](docs/screenshot.png)
 
 ## Run it
 
@@ -25,6 +25,16 @@ The runner extracts the exact algorithm block shipped inside `index.html` (frame
 3. Plays every match visibly over time with Elo based odds, speed controls (slow, normal, fast, instant), pause and resume, animated standings, and a progress meter
 4. Seeds the top finishers into a knockout bracket, advances winners through the tree, and crowns a champion
 5. Draws the mathematics live: the K_n diagram on its felt table inks each round's perfect matching chord by chord, keeps played edges as chalk residue, and counts coverage until all n(n-1)/2 edges are drawn exactly once
+6. Runs a guided walkthrough: an eighteen step, four act lecture mode that works both algorithms by hand on a small field, with a live congruence table, a doubling seed build, a tree distance diagram, and a carry-over heatmap
+
+## Guided walkthrough (ten to fifteen minutes)
+
+The Guided Walkthrough section is a steppable, narrated tour of the two discrete math algorithms, sized so every number stays on screen. It runs on a fixed teaching field (six players for the round robin, an eight seed bracket for the knockout) independent of the roster loaded above, so it presents the same way every time. Use Next and Back, jump between acts with the chips, or press Auto-play to advance hands free.
+
+1. Round robin. K_6 and the handshake lemma (fifteen matches), a round as a perfect matching, the whole schedule as a one-factorization, the circle method built rotation by rotation with chalk residue, then the congruence proof shown as a live table (ring players i and j meet in round r+1 exactly when i + j is congruent to -2r mod 5; the five rounds sweep the residue classes 0, 3, 1, 4, 2, every class once, because 2 is invertible mod 5). Closes on coverage complete and the chromatic index reason odd fields force a bye.
+2. Rating. Elo expectation and the conserved point transfer, then the race to five as a negative binomial whose per rack probability is solved by bisection so the match odds equal Elo exactly.
+3. Knockout tree. The seeded bracket as a complete binary tree (k - 1 matches, and the double elimination count 2k - 2), the doubling seed recurrence built pass by pass, the pair sum invariant k + 1, and the distance property drawn on the tree (seeds 1 and 2 can meet only in the final; 1 and 4 no earlier than the semifinals).
+4. Carry-over. The circle method is provably the most unbalanced round robin: the live carry-over matrix as a heatmap, its value as the sum of squares, next to the balanced minimum n(n-1).
 
 ## Two minute demo
 
@@ -43,7 +53,7 @@ Model the field as the complete graph K_n: one vertex per player, one edge per r
 
 The construction is as old as the theory: Kirkman first built one-factorizations of complete graphs (1847), and the circle arrangement itself appears in Lucas (1883). Fix one player in a seat, arrange the rest in a ring, pair opposite seats each round, rotate the ring one seat between rounds. Why every pair meets exactly once: label the ring players 0..n-2. Opposite seat positions have a constant position sum, so after r rotations the pairs that meet are exactly those whose label sum falls in a fixed residue class shifted by 2r modulo n-1. Since n-1 is odd, 2 is invertible mod n-1, so the n-1 rounds sweep every residue class once and each pair of labels meets in exactly one round. The fixed player meets whichever ring player rotates into the opposite seat, a different one each round.
 
-Odd fields add a phantom bye seat: the schedule becomes a one-factorization of K_(n+1) and the player paired with the phantom rests, so there are n rounds and each player rests exactly once.
+Odd fields add a phantom bye seat: the schedule becomes a one-factorization of K_(n+1) and the player paired with the phantom rests, so there are n rounds and each player rests exactly once. Seen as an edge coloring (one color per round), this is the chromatic index of K_n: n-1 for even n (a one-factorization, no byes) and n for odd n (every round leaves one vertex uncolored, a forced bye). The circle method is only one such schedule: K_6 has 6 distinct one-factorizations, K_8 has 6240 (OEIS A000438).
 
 Why every pair meets exactly once, in two steps: number the ring vertices 1 to n-1. (1) Ring vertices i and j are paired in round r+1 exactly when i + j is congruent to -2r modulo n-1, because opposite seats have constant position sum and each rotation shifts the selected sum class by -2. (2) Since n-1 is odd, 2 is invertible modulo n-1, so the map from rounds to residue classes is a bijection: every ring pair lands in exactly one round, and the fixed vertex takes the leftover. The app displays this proof with the live modulus, shows the residue class each round selects under the diagram, and the test suite asserts the congruence for every field size.
 
@@ -64,9 +74,11 @@ Matches are races (first to 5 racks, final to 7). If the per rack win probabilit
 
 The bracket is a complete binary tree: leaves are seeds, internal nodes are matches, the root is the final. Seeds come from group standings (wins, then current Elo). Placement follows the standard doubling construction, seedOrder(4) = [1, 4, 2, 3] and seedOrder(8) = [1, 8, 4, 5, 2, 7, 3, 6], read pairwise as first round matches. Every first round pairing sums to k+1 and the strongest seeds land in opposite halves, so seeds 1 and 2 can only meet in the final. Fields of 12 or more send the top 8; smaller fields send the top 4.
 
+The distance property is exact: `seedMeetRound(k, a, b)` returns the earliest round two seeds can meet, which is the height of their lowest common ancestor in the tree (the position of the highest differing bit of their leaf indices in seedOrder). The top 2^t seeds land in 2^t different subtrees, so no two of them meet before the round with 2^t players left: seeds 1 and 2 only in the final, 1 through 4 no earlier than the semifinals. A single elimination bracket of k players is exactly k-1 matches (each match eliminates one player); double elimination, the amateur pool standard, is 2k-2 (or 2k-1 with a bracket reset), because k-1 non-champions each take two losses.
+
 ### Known limitation, acknowledged
 
-The circle method is correct but maximally unbalanced with respect to the carry-over effect (receiving an opponent right after that opponent's previous match affects them). Russell (1980) showed balanced carry-over is achievable when n is a power of two; Lambrechts, Ficker, Goossens, and Spieksma (2018) proved the circle method attains the maximum possible carry-over effect value, and that every maximum carry-over schedule arises from the circle method. For a casual event the trade for simplicity is acceptable, and the app states this in its mathematics panel.
+The circle method is correct but maximally unbalanced with respect to the carry-over effect (receiving an opponent right after that opponent's previous match affects them). The app builds the carry-over matrix G live from the schedule, where G[j][k] counts how often a player handed a carry-over from j to k, and measures imbalance by the value sum over j,k of G[j][k] squared, shown next to the balanced minimum n(n-1). Russell (1980) showed balanced carry-over is achievable when n is a power of two; Lambrechts, Ficker, Goossens, and Spieksma (2018) proved the circle method attains the maximum possible carry-over effect value, and that every maximum carry-over schedule arises from the circle method. For a casual event the trade for simplicity is acceptable, and the app shows both the matrix (as a heatmap) and this argument in its mathematics panel and walkthrough.
 
 ## References
 
@@ -76,17 +88,22 @@ The circle method is correct but maximally unbalanced with respect to the carry-
 - E. Lambrechts, A. M. C. Ficker, D. R. Goossens, F. C. R. Spieksma, Round-robin tournaments generated by the circle method have maximum carry-over, Mathematical Programming 172 (2018) 277-302.
 - A. E. Elo, The Rating of Chess Players, Past and Present, Arco, 1978.
 - W. D. Wallis, One-Factorizations, Kluwer, 1997.
+- V. G. Vizing, On an estimate of the chromatic class of a p-graph, Diskret. Analiz 3 (1964) 25-30.
+- OEIS Foundation, Sequence A000438, Number of one-factorizations of the complete graph K_2n.
 
 ## Code map
 
 Everything lives in `index.html`, organized into commented sections:
 
-1. Pure algorithms (circle method, verification, Elo, race model, seeding), DOM free and extracted by the test runner
+1. Pure algorithms (circle method, verification, Elo, race model, seeding, seedMeetRound, carry-over matrix), DOM free and extracted by the test runner
 2. Roster parsing and validation
 3. App state (plain in-memory variables, no localStorage or sessionStorage)
-4. Rendering (standings, schedule, bracket, verification, mathematics panel, K_n diagram)
+4. Rendering (standings, schedule, bracket, verification, mathematics panel, K_n diagram, carry-over heatmap)
+   - 4b. Guided walkthrough (lecture mode): step engine and the self-contained per step visuals
 5. Simulation loop (timed queue, speeds, pause and resume, instant drain)
 6. Event wiring and boot
+
+The pure block now also exports `seedMeetRound` (earliest round two seeds can meet) and `carryOverMatrix` / `carryOverValue`; the Node suite runs just over 108,000 assertions against it.
 
 ## Acceptance checklist
 
@@ -98,4 +115,5 @@ Everything lives in `index.html`, organized into commented sections:
 - Odd player counts produce rotating byes without breaking: yes, each player rests exactly once
 - Scales beyond the assignment's 4 to 16: fields up to 30 players keep every guarantee (29 rounds, 435 matches, all checks passing, Elo conserved)
 - Mathematics panel explains the one-factorization, the Elo formula with a live worked example, and the seeding rule: yes
+- Guided walkthrough presents both algorithms step by step, with a live congruence table, seed build, tree distance diagram, and carry-over heatmap: yes, eighteen steps across four acts
 - No em dashes in the interface: yes, enforced
