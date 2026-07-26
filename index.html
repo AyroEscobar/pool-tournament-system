@@ -2192,8 +2192,175 @@ function walkActRoundRobin() {
   ];
 }
 
+/* A horizontal odds bar: the match win probability split between two
+   rated players, gold for A, steel for B. */
+function walkOddsBar(rA, rB, raceTo) {
+  const E = eloExpected(rA, rB);
+  const w = 300, x0 = 10, split = Math.round(w * E);
+  return '<svg viewBox="0 0 320 92" role="img" aria-label="Match odds bar">' +
+    '<rect x="' + x0 + '" y="30" width="' + split + '" height="26" fill="#94690C"/>' +
+    '<rect x="' + (x0 + split) + '" y="30" width="' + (w - split) + '" height="26" fill="#23251F"/>' +
+    '<text x="' + x0 + '" y="22" font-family="IBM Plex Mono, monospace" font-size="11" fill="#20221E">A ' + rA + '</text>' +
+    '<text x="' + (x0 + w) + '" y="22" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="#20221E">B ' + rB + '</text>' +
+    '<text x="' + (x0 + split / 2) + '" y="48" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#F4F1E6">' + (E * 100).toFixed(1) + '%</text>' +
+    '<text x="' + (x0 + split + (w - split) / 2) + '" y="48" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="#F4F1E6">' + ((1 - E) * 100).toFixed(1) + '%</text>' +
+    '<text x="' + (x0 + w / 2) + '" y="78" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#7B7F72">match win probability, race to ' + raceTo + '</text>' +
+    '</svg>';
+}
+
+/* The seed-order doubling build, one row per pass; the reflected
+   partners inserted by the last shown pass are highlighted. */
+function walkSeedBuild(passes) {
+  const stages = [[1]];
+  while (stages[stages.length - 1].length < 8) {
+    const prev = stages[stages.length - 1];
+    const size = prev.length * 2;
+    const next = [];
+    for (const s of prev) { next.push(s); next.push(size + 1 - s); }
+    stages.push(next);
+  }
+  const shown = stages.slice(0, passes);
+  const rows = shown.map(function (row, idx) {
+    const fresh = idx === shown.length - 1 && idx > 0;
+    const pills = row.map(function (v, i) {
+      const isFresh = fresh && i % 2 === 1;
+      return '<div class="seedpill' + (isFresh ? ' fresh' : '') + '">' + v + '</div>';
+    }).join('');
+    return '<div class="seedrow"><div class="seedrow-label">S(' + row.length + ')</div>' + pills + '</div>';
+  }).join('');
+  return '<div class="seedbuild">' + rows + '</div>';
+}
+
+/* A seeded eight-player single-elimination tree. Leaves are the
+   seeds in seedOrder; internal nodes merge pairs rightward to the
+   final. If two seeds are given, their paths to the round they can
+   first meet are inked gold and that node is marked. */
+function walkTreeSvg(a, b) {
+  const k = 8;
+  const order = seedOrder(k);
+  const xs = [26, 120, 214, 300];
+  const levels = [[]];
+  for (let p = 0; p < k; p++) levels[0].push({ x: xs[0], y: 22 + p * 36 });
+  for (let L = 1; L <= 3; L++) {
+    const prev = levels[L - 1], cur = [];
+    for (let j = 0; j < prev.length / 2; j++) cur.push({ x: xs[L], y: (prev[2 * j].y + prev[2 * j + 1].y) / 2 });
+    levels.push(cur);
+  }
+  const hi = a != null && b != null;
+  const pa = hi ? order.indexOf(a) : -1;
+  const pb = hi ? order.indexOf(b) : -1;
+  const meet = hi ? seedMeetRound(k, a, b) : -1;
+  const s = ['<svg viewBox="0 0 330 306" role="img" aria-label="Seeded eight player single elimination tree">'];
+  for (let L = 0; L < 3; L++) {
+    const prev = levels[L], cur = levels[L + 1];
+    for (let j = 0; j < prev.length; j++) {
+      const parent = cur[j >> 1], child = prev[j];
+      const gold = hi && L < meet && (Math.floor(pa / Math.pow(2, L)) === j || Math.floor(pb / Math.pow(2, L)) === j);
+      s.push('<line x1="' + child.x + '" y1="' + child.y + '" x2="' + parent.x + '" y2="' + parent.y +
+        '" stroke="' + (gold ? '#94690C' : '#C6BFA9') + '" stroke-width="' + (gold ? 2.6 : 1.2) + '"/>');
+    }
+  }
+  if (hi) {
+    const node = levels[meet][Math.floor(pa / Math.pow(2, meet))];
+    const label = ['', 'QF', 'SF', 'Final'][meet];
+    s.push('<circle cx="' + node.x + '" cy="' + node.y + '" r="7" fill="#94690C"/>');
+    s.push('<text x="' + node.x + '" y="' + (node.y - 12) + '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="700" fill="#94690C">' + label + '</text>');
+  }
+  for (let p = 0; p < k; p++) {
+    const seed = order[p], pt = levels[0][p], on = hi && (seed === a || seed === b);
+    if (on) s.push('<circle cx="' + pt.x + '" cy="' + pt.y + '" r="13.5" fill="none" stroke="#94690C" stroke-width="1.8"/>');
+    s.push('<circle cx="' + pt.x + '" cy="' + pt.y + '" r="11" fill="#FBF9F2" stroke="#20221E" stroke-width="1.2"/>');
+    s.push('<text x="' + pt.x + '" y="' + (pt.y + 3.4) + '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="600" fill="#20221E">' + seed + '</text>');
+  }
+  s.push('</svg>');
+  return s.join('');
+}
+
+/* ---- Interlude: rating the players and simulating a race ---- */
+function walkActRating() {
+  const A = 'Rating';
+  const rA = 1650, rB = 1500, raceTo = 5;
+  const E = eloExpected(rA, rB);
+  const q = rackProbabilityFor(E, raceTo);
+  return [
+    {
+      act: A, kicker: 'Rating, step 1',
+      title: 'Rating the players with Elo',
+      narr: '<p>The schedule says who plays whom. To simulate results we need <strong>how likely</strong> each player is to win. That is the <strong>Elo</strong> rating system, the same idea used in chess.</p>' +
+        '<p>Only the rating gap matters. A win moves K = 32 points from loser to winner, scaled by how surprising it was, so a favorite gains little for an expected win and a lot for an upset. Because the two updates are equal and opposite, <span class="hl">rating points are conserved</span> in every match.</p>',
+      math: function () {
+        return 'E<sub>A</sub> = 1 / (1 + 10^((R<sub>B</sub> - R<sub>A</sub>) / 400))<br>' +
+          'A ' + rA + ' vs B ' + rB + ' &nbsp;→&nbsp; E<sub>A</sub> = <span class="accent">' + E.toFixed(3) + '</span><br>' +
+          'A wins: +32 &times; (1 - ' + E.toFixed(3) + ') = <span class="accent">' + (32 * (1 - E)).toFixed(1) + '</span> pts &nbsp;|&nbsp; A loses: ' + (32 * (0 - E)).toFixed(1) + ' pts';
+      },
+      view: function () { return walkOddsBar(rA, rB, raceTo); }
+    },
+    {
+      act: A, kicker: 'Rating, step 2',
+      title: 'A race to 5 is a negative binomial',
+      narr: '<p>Pool matches are not one game, they are a <strong>race</strong>: first to 5 racks wins. If each rack is an independent coin weighted q for player A, the match win probability is a <strong>negative binomial tail</strong>: A reaches 5 rack wins while B has some number k less than 5.</p>' +
+        '<p>Feeding the Elo number in as the per-rack q would over-reward the favorite, because a long race magnifies small edges. So the app inverts the formula by <span class="hl">bisection</span>: it finds the q whose whole-match odds equal Elo exactly. Favorites win, upsets survive, scorelines look like real pool.</p>',
+      math: function () {
+        return 'P(5, q) = Σ<sub>k=0</sub><sup>4</sup> C(4+k, k) q<sup>5</sup> (1-q)<sup>k</sup><br>' +
+          'solve P(5, q) = E<sub>A</sub> = ' + E.toFixed(3) + ' &nbsp;→&nbsp; per-rack q = <span class="accent">' + q.toFixed(3) + '</span><br>' +
+          'check: P(5, ' + q.toFixed(3) + ') = <span class="win">' + raceWinProbability(q, raceTo).toFixed(3) + '</span>, the Elo odds exactly';
+      },
+      view: function () { return walkOddsBar(rA, rB, raceTo); }
+    }
+  ];
+}
+
+/* ---- Act 2: the seeded knockout as a binary tree ---- */
+function walkActBracket() {
+  const A = 'Knockout tree';
+  return [
+    {
+      act: A, kicker: 'Knockout tree, step 1',
+      title: 'The top finishers seed a binary tree',
+      narr: '<p>The group stage ranks everyone. The top 8 by standings (wins, then Elo) advance to a <strong>single-elimination knockout</strong>, which is a <strong>complete binary tree</strong>: the 8 seeds are the leaves, every internal node is a match, and the root is the final.</p>' +
+        '<p>Counting is immediate: 8 leaves collapse to 1 champion, and each match removes exactly one player, so there are 8 - 1 = <span class="hl">7 matches</span>. Every knockout of k players is k - 1 matches, the cleanest counting argument in the whole system.</p>',
+      math: '8 leaves, 7 internal matches, 1 root (the final)<br>matches = k - 1 = <span class="accent">7</span> (each match eliminates one player)',
+      view: function () { return walkTreeSvg(null, null); }
+    },
+    {
+      act: A, kicker: 'Knockout tree, step 2',
+      title: 'Build the seed order by doubling',
+      narr: '<p>Where does each seed sit? Not 1, 2, 3, 4 down the page. The bracket order is built by a <strong>doubling recurrence</strong>: start from [1], and on each pass replace every seed s with the pair (s, size + 1 - s), the reflected partner shown in brass.</p>' +
+        '<p>Four passes give the classic 8-seed order. It is exactly what makes the bracket fair.</p>',
+      math: 'S(1) = [1],&nbsp; S(2m) = [ s, 2m+1-s : s ∈ S(m) ]<br>⇒ S(8) = <span class="accent">[1, 8, 4, 5, 2, 7, 3, 6]</span>',
+      view: function () { return walkSeedBuild(4); }
+    },
+    {
+      act: A, kicker: 'Knockout tree, step 3',
+      title: 'Every first-round pair sums to k + 1',
+      narr: '<p>Read the final order in pairs and every first-round match sums to <strong>k + 1 = 9</strong>: 1 plays 8, 4 plays 5, 2 plays 7, 3 plays 6. That is the design rule, <span class="hl">strongest against weakest</span>, applied at every slot at once.</p>' +
+        '<p>It is also why the halves are balanced: seed 1 sits in the top half, seed 2 in the bottom, so the bracket is symmetric around the middle.</p>',
+      math: '1+8 = 4+5 = 2+7 = 3+6 = <span class="accent">9</span><br>top half [1, 8, 4, 5] &nbsp;|&nbsp; bottom half [2, 7, 3, 6]',
+      view: function () { return walkTreeSvg(null, null); }
+    },
+    {
+      act: A, kicker: 'Knockout tree, the property',
+      title: 'Who can meet when: the distance property',
+      narr: '<p>Here is the payoff of that seeding. Seed 1 is in the top half, seed 2 in the bottom, so their paths to the trophy never cross until the very end: <span class="hl">seeds 1 and 2 can only meet in the final</span>.</p>' +
+        '<p>The reason is structural. The top 2 seeds land in 2 different halves, the top 4 in 4 different quarters, the top 8 in 8 different eighths. Two seeds meet no earlier than the round where their subtrees finally join, which is the height of their lowest common ancestor in the tree.</p>',
+      math: 'seedMeetRound(8, 1, 2) = <span class="accent">3</span> (the final)<br>seedMeetRound(8, 1, 8) = 1 (first round)',
+      view: function () { return walkTreeSvg(1, 2); }
+    },
+    {
+      act: A, kicker: 'Knockout tree, done',
+      title: 'Semifinals for 1 and 4, then a champion',
+      narr: '<p>Same rule, one level down: seeds 1 and 4 share a half but sit in different quarters, so the earliest they can meet is the <strong>semifinal</strong>. Winning the group is worth real protection, it keeps the dangerous seeds apart for as long as possible.</p>' +
+        '<p>From here the winners advance up the tree until one player remains at the root. The live <strong>Knockout Bracket</strong> above plays exactly this out with the Elo simulation, and crowns the champion.</p>',
+      math: 'seedMeetRound(8, 1, 4) = <span class="accent">2</span> (the semifinals)<br>champion emerges at the root after log₂ 8 = 3 rounds',
+      view: function () { return walkTreeSvg(1, 4); }
+    }
+  ];
+}
+
 function walkBuildSteps() {
-  WALK.steps = walkActRoundRobin();
+  WALK.steps = walkActRoundRobin()
+    .concat(walkActRating())
+    .concat(walkActBracket());
 }
 
 function renderWalkChips() {
