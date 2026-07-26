@@ -389,6 +389,15 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .math-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .math-col { display: grid; gap: 18px; align-content: start; }
 .math-wide { grid-column: 1 / -1; }
+.carry-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; margin-bottom: 12px; }
+@media (max-width: 720px) { .carry-grid { grid-template-columns: 1fr; } }
+.carry-viz { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.carry-heat { border-collapse: collapse; font: 400 10px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.carry-heat td, .carry-heat th { text-align: center; border: 1px solid var(--card); }
+.carry-heat th { color: var(--ink-faint); border: none; font-weight: 600; }
+.carry-heat td.diag { background: var(--card-inset); color: var(--line-strong); }
+.carry-caption { text-align: center; max-width: 260px; }
+.carry-caption strong { color: var(--gold); }
 @media (max-width: 980px) { .math-grid { grid-template-columns: 1fr; } }
 .math-card h3 { font: 600 16.5px/1.3 var(--serif); color: var(--ink); margin: 0 0 9px; }
 .math-card p { font-size: 13.5px; color: var(--ink-dim); margin: 0 0 10px; line-height: 1.68; }
@@ -747,12 +756,26 @@ footer {
 
       <div class="card math-card math-wide">
         <h3>A documented limitation of the circle method</h3>
-        <p>If B meets A immediately after A faced C, B is said to receive a <strong>carry-over effect</strong>
-        from C, for example facing an opponent right after a bruising loss. A schedule is considered balanced
-        when these effects spread evenly. The circle method does the opposite: it attains the maximum possible
-        carry-over effect value, and every schedule with maximum carry-over arises from the circle method. For a
-        student union tournament this is an acceptable trade for simplicity, but fairer constructions exist,
-        such as Russell's designs, balanced whenever n is a power of two.</p>
+        <div class="carry-grid">
+          <div class="carry-prose">
+            <p>If B meets A immediately after A faced C, B is said to receive a <strong>carry-over effect</strong>
+            from C, for example facing an opponent right after a bruising loss. Build the matrix G where G[j][k]
+            counts how often some player handed a carry-over from j to k, then measure imbalance by the sum of
+            squares of its entries. A balanced schedule spreads the handoffs so every off-diagonal entry is 1,
+            reaching the minimum n(n-1).</p>
+            <p>The circle method does the opposite: it attains the <strong>maximum</strong> possible carry-over
+            value, and every schedule with maximum carry-over arises from the circle method. The heatmap is this
+            field's matrix, and the value is computed live below. For a student union tournament the trade for
+            simplicity is acceptable, but fairer constructions exist, such as Russell's designs, balanced
+            whenever n is a power of two.</p>
+            <div class="eqlabel">Imbalance value, this schedule</div>
+            <div class="formula" id="carry-value"></div>
+          </div>
+          <div class="carry-viz">
+            <div id="carry-heatmap"></div>
+            <p class="fine carry-caption" id="carry-caption"></p>
+          </div>
+        </div>
         <p class="cite">T. P. Kirkman, On a problem in combinations, Cambridge and Dublin Mathematical Journal 2 (1847) 191-204.<br>
         É. Lucas, Récréations Mathématiques, volume 2, Gauthier-Villars, Paris, 1883.<br>
         K. G. Russell, Balancing carry-over effects in round robin tournaments, Biometrika 67 (1980) 127-131.<br>
@@ -1591,6 +1614,49 @@ function renderMathPanel() {
   el('seed-recurrence').innerHTML =
     'S(1) = [1],&nbsp;&nbsp;S(2k) = [ s, 2k+1-s : s ∈ S(k) ]<br>' +
     '⇒&nbsp; S(' + k + ') = [' + order.join(', ') + '],&nbsp; first round pair sums = ' + (k + 1);
+
+  renderCarryPanel();
+}
+
+/* The carry-over matrix of the current schedule, drawn as a heatmap:
+   deeper brass means player j hands more carry-overs to player k.
+   The value below it is the sum of squares, next to the balanced
+   minimum n(n-1) so the imbalance is visible as a number. */
+function renderCarryPanel() {
+  const s = state.schedule;
+  const N = s.playerCount;
+  const G = carryOverMatrix(s);
+  let max = 0;
+  for (const row of G) for (const x of row) if (x > max) max = x;
+  const cell = N <= 12 ? 22 : N <= 20 ? 14 : 10;
+  const fs = N <= 12 ? 11 : 8;
+  const showNum = N <= 16;
+  const dim = 'width:' + cell + 'px;height:' + cell + 'px;font-size:' + fs + 'px;';
+  let html = '<table class="carry-heat"><thead><tr><th style="' + dim + '"></th>';
+  for (let j = 0; j < N; j++) html += '<th style="' + dim + '">' + j + '</th>';
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < N; i++) {
+    html += '<tr><th style="' + dim + '">' + i + '</th>';
+    for (let j = 0; j < N; j++) {
+      const v = G[i][j];
+      if (i === j) { html += '<td class="diag" style="' + dim + '">·</td>'; continue; }
+      const alpha = v === 0 ? 0 : (0.16 + 0.72 * (max ? v / max : 0));
+      const bg = v === 0 ? 'transparent' : 'rgba(148,105,12,' + alpha.toFixed(2) + ')';
+      const fg = alpha > 0.55 ? '#FBF9F2' : 'var(--ink-dim)';
+      html += '<td style="' + dim + 'background:' + bg + ';color:' + fg + '">' + (showNum && v ? v : '') + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  el('carry-heatmap').innerHTML = html;
+
+  const value = carryOverValue(s);
+  const min = N * (N - 1);
+  el('carry-value').innerHTML = 'Γ = Σ<sub>j,k</sub> G[j][k]² = <strong>' + value +
+    '</strong>&nbsp;&nbsp; vs balanced minimum n(n-1) = ' + min;
+  el('carry-caption').innerHTML = s.hasBye
+    ? 'G[j][k] for the ' + N + ' player field. The odd bye breaks the clean n(n-1) count, so handoffs around a rest are skipped; the pattern still shows the circle method concentrating carry-over.'
+    : 'G[j][k] for the ' + N + ' player field. Row 0 is the fixed player, spread evenly; the ring players show deep cells where carry-over piles up. This value is the <strong>maximum</strong> possible for n = ' + N + '.';
 }
 
 /* K_n MATCHING DIAGRAM, drawn on a felt table bed.
@@ -2405,10 +2471,54 @@ function walkActBracket() {
   ];
 }
 
+/* The carry-over heatmap for the six player teaching field. */
+function walkCarryHeat() {
+  const G = carryOverMatrix(walkSched);
+  const N = walkSched.playerCount;
+  let max = 0;
+  for (const row of G) for (const x of row) if (x > max) max = x;
+  const dim = 'width:30px;height:30px;font-size:12px;';
+  let html = '<table class="carry-heat"><thead><tr><th style="' + dim + '"></th>';
+  for (let j = 0; j < N; j++) html += '<th style="' + dim + '">' + j + '</th>';
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < N; i++) {
+    html += '<tr><th style="' + dim + '">' + i + '</th>';
+    for (let j = 0; j < N; j++) {
+      if (i === j) { html += '<td class="diag" style="' + dim + '">·</td>'; continue; }
+      const v = G[i][j];
+      const alpha = v === 0 ? 0 : (0.16 + 0.72 * (v / max));
+      const bg = v === 0 ? 'transparent' : 'rgba(148,105,12,' + alpha.toFixed(2) + ')';
+      const fg = alpha > 0.55 ? '#FBF9F2' : '#52564D';
+      html += '<td style="' + dim + 'background:' + bg + ';color:' + fg + '">' + (v || '') + '</td>';
+    }
+    html += '</tr>';
+  }
+  return html + '</tbody></table>';
+}
+
+/* ---- Coda: the carry-over effect, a documented limitation ---- */
+function walkActCarry() {
+  const A = 'Carry-over';
+  const value = carryOverValue(walkSched);
+  const min = walkSched.playerCount * (walkSched.playerCount - 1);
+  return [
+    {
+      act: A, kicker: 'Carry-over, the twist',
+      title: 'The circle method is provably the most unbalanced',
+      narr: '<p>One honest caveat to close on. If player i faces j, then next round faces k, then k received a <strong>carry-over</strong> from j through i, maybe an opponent worn down or on a heater. Fair schedules spread these evenly.</p>' +
+        '<p>Count them in a matrix G, measure imbalance by the sum of squares of its entries, and a recent theorem lands hard: the circle method attains the <span class="hl">maximum</span> possible carry-over value, and every maximum-carry-over schedule is a circle-method schedule (Lambrechts, Ficker, Goossens, Spieksma, 2018). The clean rotation that made the round robin easy is the least balanced choice for carry-over.</p>',
+      math: 'Γ = Σ G[j][k]² = <span class="accent">' + value + '</span> for K₆<br>' +
+        'balanced minimum n(n-1) = ' + min + ', reachable only when n is a power of two (Russell 1980)',
+      view: function () { return walkCarryHeat(); }
+    }
+  ];
+}
+
 function walkBuildSteps() {
   WALK.steps = walkActRoundRobin()
     .concat(walkActRating())
-    .concat(walkActBracket());
+    .concat(walkActBracket())
+    .concat(walkActCarry());
 }
 
 function renderWalkChips() {
