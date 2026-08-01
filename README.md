@@ -1,6 +1,6 @@
 # Pool Tournament Scheduler
 
-A single file web app that schedules and simulates a complete eight ball tournament: a circle method round robin group stage, live Elo driven match simulation, and a seeded single elimination bracket. A built in guided walkthrough teaches the two discrete math algorithms behind it, step by step, on a small worked field.
+A single file web app that schedules and simulates a complete eight ball tournament: a circle method round robin group stage, live Elo driven match simulation, and a seeded knockout that can be single or double elimination. A built in guided walkthrough teaches the two discrete math algorithms behind it, step by step, on a small worked field.
 
 Built for CS 4302 (Mathematics of Computing) at UT Dallas. The eventual real world use is running a pool tournament at the UTD Student Union.
 
@@ -74,7 +74,15 @@ Matches are races (first to 5 racks, final to 7). If the per rack win probabilit
 
 The bracket is a complete binary tree: leaves are seeds, internal nodes are matches, the root is the final. Seeds come from group standings (wins, then current Elo). Placement follows the standard doubling construction, seedOrder(4) = [1, 4, 2, 3] and seedOrder(8) = [1, 8, 4, 5, 2, 7, 3, 6], read pairwise as first round matches. Every first round pairing sums to k+1 and the strongest seeds land in opposite halves, so seeds 1 and 2 can only meet in the final. Fields of 12 or more send the top 8; smaller fields send the top 4.
 
-The distance property is exact: `seedMeetRound(k, a, b)` returns the earliest round two seeds can meet, which is the height of their lowest common ancestor in the tree (the position of the highest differing bit of their leaf indices in seedOrder). The top 2^t seeds land in 2^t different subtrees, so no two of them meet before the round with 2^t players left: seeds 1 and 2 only in the final, 1 through 4 no earlier than the semifinals. A single elimination bracket of k players is exactly k-1 matches (each match eliminates one player); double elimination, the amateur pool standard, is 2k-2 (or 2k-1 with a bracket reset), because k-1 non-champions each take two losses.
+The distance property is exact: `seedMeetRound(k, a, b)` returns the earliest round two seeds can meet, which is the height of their lowest common ancestor in the tree (the position of the highest differing bit of their leaf indices in seedOrder). The top 2^t seeds land in 2^t different subtrees, so no two of them meet before the round with 2^t players left: seeds 1 and 2 only in the final, 1 through 4 no earlier than the semifinals.
+
+### Double elimination, the second life
+
+The knockout can also run as a double elimination, chosen with the Knockout format toggle. Everyone starts in the winners bracket; a first loss drops you into the losers bracket, and a second loss ends your run. So every player except the champion is eliminated with exactly two losses. Counting by losses gives the match totals directly: a single elimination of k players is exactly k-1 matches (each match makes one loss, and k-1 non-champions must each be eliminated once), while a double elimination is 2k-2, or 2k-1 when the grand final needs a reset (the k-1 non-champions carry two losses each, the champion zero or one). The value for a casual student union event is that people play more: a losers bracket lets a first round loss still lead to several more games.
+
+`buildDoubleBracket(seededIds)` constructs the whole thing for any k = 2^m as a set of matches already interleaved into a valid play order, each carrying a winTo and loseTo pointer for where its winner and loser go next. The winners bracket is the ordinary seeded tree (k-1 matches). The losers bracket is 2(m-1) rounds (k-2 matches) that alternate minor rounds (losers bracket survivors meet) and major rounds (fresh winners bracket losers drop in), with the drops crossed in reversed order so a player never meets, in the round they drop into, anyone from the winners match they just came through: no immediate rematch. The grand final pits the undefeated winners champion against the once beaten losers champion, with a single reset game if the losers champion wins the first. The test suite plays full double eliminations out with a seeded RNG and checks the invariants for k = 4, 8, 16: exactly one champion, every other player out with two losses, and the match count landing on 2k-2 or 2k-1.
+
+A single elimination is shorter and gives the cleaner binary tree for the mathematics; a double elimination is fairer to a single unlucky match and keeps everyone playing. The app offers both so the tradeoff is visible side by side.
 
 ### Known limitation, acknowledged
 
@@ -95,15 +103,15 @@ The circle method is correct but maximally unbalanced with respect to the carry-
 
 Everything lives in `index.html`, organized into commented sections:
 
-1. Pure algorithms (circle method, verification, Elo, race model, seeding, seedMeetRound, carry-over matrix), DOM free and extracted by the test runner
+1. Pure algorithms (circle method, verification, Elo, race model, single and double elimination seeding, seedMeetRound, carry-over matrix), DOM free and extracted by the test runner
 2. Roster parsing and validation
 3. App state (plain in-memory variables, no localStorage or sessionStorage)
-4. Rendering (standings, schedule, bracket, verification, mathematics panel, K_n diagram, carry-over heatmap)
+4. Rendering (standings, schedule, single and double elimination brackets, verification, mathematics panel, K_n diagram, carry-over heatmap)
    - 4b. Guided walkthrough (lecture mode): step engine and the self-contained per step visuals
-5. Simulation loop (timed queue, speeds, pause and resume, instant drain)
+5. Simulation loop (timed queue, speeds, pause and resume, instant drain; drives both knockout formats off one match queue)
 6. Event wiring and boot
 
-The pure block now also exports `seedMeetRound` (earliest round two seeds can meet) and `carryOverMatrix` / `carryOverValue`; the Node suite runs just over 108,000 assertions against it.
+The pure block also exports `seedMeetRound`, `carryOverMatrix` / `carryOverValue`, and `buildDoubleBracket` / `applyDoubleResult`; the Node suite runs just over 108,000 assertions against it, including full simulated double eliminations.
 
 ## Acceptance checklist
 
@@ -111,7 +119,8 @@ The pure block now also exports `seedMeetRound` (earliest round two seeds can me
 - Verification panel passes all checks: yes, 5 of 5 for every count 4 through 16 (also covered by the Node tests)
 - Tournament plays out visibly over time with live standings and Elo updates: yes
 - Pause, resume, and all four speeds work, including switching mid run: yes
-- Top finishers advance into a correctly seeded bracket and a champion is crowned: yes
+- Top finishers advance into a correctly seeded bracket and a champion is crowned: yes, single or double elimination by the Knockout format toggle
+- Double elimination is correct: yes, every non champion leaves with exactly two losses and the match count is 2k-2 or 2k-1, checked by simulated play in the Node tests for k = 4, 8, 16
 - Odd player counts produce rotating byes without breaking: yes, each player rests exactly once
 - Scales beyond the assignment's 4 to 16: fields up to 30 players keep every guarantee (29 rounds, 435 matches, all checks passing, Elo conserved)
 - Mathematics panel explains the one-factorization, the Elo formula with a live worked example, and the seeding rule: yes
