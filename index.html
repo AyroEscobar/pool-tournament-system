@@ -1126,6 +1126,148 @@ function buildBracket(seededIds) {
   return { rounds: rounds, seedOf: seedOf, k: k, championId: null };
 }
 
+/* SEEDED DOUBLE ELIMINATION BRACKET
+
+   Everyone gets a second life: a first loss drops you from the
+   winners bracket (WB) into the losers bracket (LB); a second loss
+   ends your run. So every player except the champion is eliminated
+   with exactly two losses. Counting by losses: the k-1 non-champions
+   carry 2 losses each, and the champion carries 0 or 1, which gives
+   exactly 2k-2 matches, or 2k-1 when the grand final needs a reset.
+   Compare single elimination's k-1: a double elimination keeps far
+   more players on the table, which is the point for a casual event.
+
+   Structure for k = 2^m seeds:
+     WB: m rounds, the ordinary seeded tree (k-1 matches). The WB
+         final winner is undefeated and goes straight to the grand
+         final.
+     LB: 2(m-1) rounds (k-2 matches) that alternate
+           minor rounds (LB survivors play each other) and
+           major rounds (fresh WB losers drop in).
+         Major rounds cross the incoming WB losers against the LB
+         survivors in reversed order, so a player never meets, in
+         the round they drop into, anyone from the WB match they
+         just came through: no immediate rematch.
+     GF: WB champion (0 losses) vs LB champion (1 loss). If the WB
+         champion wins, done. If the LB champion wins, both now have
+         one loss, so a single deciding reset game is played.
+
+   Returns the same shape the simulator drives for a single
+   elimination bracket (rounds, seedOf, k, championId) plus per round
+   labels, with the rounds already interleaved into a valid play
+   order (every match's two feeders resolve before it). Each match
+   carries winTo and loseTo, a {r, i, slot} pointer to where its
+   winner and loser go next (loseTo null means eliminated); the grand
+   final is resolved specially by applyDoubleResult. */
+function buildDoubleBracket(seededIds) {
+  const k = seededIds.length;
+  let m = 0;
+  while ((1 << m) < k) m++;                 // k is a power of two, m = log2 k
+  const order = seedOrder(k);
+
+  const WB = [null];                         // WB[r], r = 1..m
+  for (let r = 1; r <= m; r++) {
+    const arr = [];
+    for (let i = 0; i < (k >> r); i++) arr.push({ a: null, b: null, result: null, bracket: 'W' });
+    WB.push(arr);
+  }
+  for (let i = 0; i < k / 2; i++) {
+    WB[1][i].a = seededIds[order[2 * i] - 1];
+    WB[1][i].b = seededIds[order[2 * i + 1] - 1];
+  }
+
+  const lbRounds = 2 * (m - 1);
+  const LB = [null];                          // LB[l], l = 1..lbRounds
+  for (let l = 1; l <= lbRounds; l++) {
+    const j = Math.ceil(l / 2);
+    const arr = [];
+    for (let i = 0; i < (k >> (j + 1)); i++) arr.push({ a: null, b: null, result: null, bracket: 'L' });
+    LB.push(arr);
+  }
+
+  const GF = { a: null, b: null, result: null, bracket: 'GF' };
+
+  /* Lay the matches into rounds in play order, remembering each
+     match's (r, i) so routing pointers can be filled in afterward. */
+  const rounds = [];
+  const labels = [];
+  const posOf = new Map();
+  function addRound(matches, label) {
+    const r = rounds.length;
+    rounds.push(matches);
+    labels.push(label);
+    matches.forEach(function (mm, i) { posOf.set(mm, { r: r, i: i }); });
+  }
+  function lbLabel(l) { return l === lbRounds ? 'Losers Final' : 'Losers Round ' + l; }
+
+  addRound(WB[1], m === 1 ? 'Winners Final' : 'Winners Round 1');
+  if (lbRounds >= 1) addRound(LB[1], lbLabel(1));
+  for (let r = 2; r <= m; r++) {
+    addRound(WB[r], r === m ? 'Winners Final' : 'Winners Round ' + r);
+    const major = 2 * (r - 1);
+    addRound(LB[major], lbLabel(major));
+    if (major + 1 <= lbRounds) addRound(LB[major + 1], lbLabel(major + 1));
+  }
+  addRound([GF], 'Grand Final');
+
+  function ref(mm, slot) { const p = posOf.get(mm); return { r: p.r, i: p.i, slot: slot }; }
+
+  /* Winners bracket routing: winner climbs the WB (final winner to
+     the grand final), loser drops into the LB. */
+  for (let r = 1; r <= m; r++) {
+    for (let i = 0; i < WB[r].length; i++) {
+      const match = WB[r][i];
+      match.winTo = r < m ? ref(WB[r + 1][i >> 1], i % 2 === 0 ? 'a' : 'b') : ref(GF, 'a');
+      if (r === 1) {
+        match.loseTo = lbRounds >= 1 ? ref(LB[1][i >> 1], i % 2 === 0 ? 'a' : 'b') : ref(GF, 'b');
+      } else {
+        const major = 2 * (r - 1);
+        match.loseTo = ref(LB[major][LB[major].length - 1 - i], 'b');   // crossed, reversed
+      }
+    }
+  }
+  /* Losers bracket routing: winner advances, loser is out. */
+  for (let l = 1; l <= lbRounds; l++) {
+    for (let i = 0; i < LB[l].length; i++) {
+      const match = LB[l][i];
+      match.loseTo = null;
+      if (l === lbRounds) match.winTo = ref(GF, 'b');
+      else if (l % 2 === 1) match.winTo = ref(LB[l + 1][i], 'a');            // minor: 1 to 1 into slot a
+      else match.winTo = ref(LB[l + 1][i >> 1], i % 2 === 0 ? 'a' : 'b');    // major: halve
+    }
+  }
+  GF.winTo = null;
+  GF.loseTo = null;
+
+  const seedOf = new Map();
+  seededIds.forEach(function (id, index) { seedOf.set(id, index + 1); });
+  return { rounds: rounds, labels: labels, seedOf: seedOf, k: k, championId: null, mode: 'double' };
+}
+
+/* Applies one resolved bracket match: sends the winner and loser to
+   their next slots. The grand final is special: slot a holds the
+   undefeated WB champion, so if slot a wins the tournament is over,
+   but if the LB champion (slot b) wins, both have one loss and a
+   single reset game is appended and returned so the caller can queue
+   it. Returns { champion } when a champion is crowned, or
+   { appended: roundIndex } when a reset game was added. */
+function applyDoubleResult(bracket, r, i, winnerId, loserId) {
+  const match = bracket.rounds[r][i];
+  if (match.bracket === 'GF') {
+    if (!match.isReset && winnerId !== match.a) {
+      const reset = { a: match.a, b: match.b, result: null, bracket: 'GF', isReset: true, winTo: null, loseTo: null };
+      bracket.rounds.push([reset]);
+      bracket.labels.push('Grand Final (reset)');
+      return { appended: bracket.rounds.length - 1 };
+    }
+    bracket.championId = winnerId;
+    return { champion: winnerId };
+  }
+  if (match.winTo) bracket.rounds[match.winTo.r][match.winTo.i][match.winTo.slot] = winnerId;
+  if (match.loseTo) bracket.rounds[match.loseTo.r][match.loseTo.i][match.loseTo.slot] = loserId;
+  return {};
+}
+
 function bracketRoundNames(k) {
   const names = [];
   for (let size = k; size >= 2; size = size / 2) {

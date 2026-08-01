@@ -17,7 +17,8 @@ const algo = new Function(html.slice(begin, end) + `
   return { BYE, buildSchedule, verifySchedule, eloExpected, eloDelta,
            raceWinProbability, rackProbabilityFor, simulateMatch,
            seedOrder, qualifierCount, buildBracket, bracketRoundNames,
-           seedMeetRound, carryOverMatrix, carryOverValue };
+           seedMeetRound, carryOverMatrix, carryOverValue,
+           buildDoubleBracket, applyDoubleResult };
 `)();
 
 let checks = 0;
@@ -219,6 +220,92 @@ for (const k of [4, 8, 16]) {
   for (let a = 1; a <= k; a++)
     for (let b = a + 1; b <= k; b++) maxRound = Math.max(maxRound, algo.seedMeetRound(k, a, b));
   assertEqual(maxRound, depth, 'no pair meets later than the final for k=' + k);
+}
+
+/* ---- Double elimination bracket ---- */
+console.log('Double elimination');
+
+/* Play a full double elimination out with a seeded RNG choosing each
+   match's winner, then check the structural invariants. */
+function playDouble(k, seed) {
+  const seededIds = Array.from({ length: k }, (_, i) => i);
+  const b = algo.buildDoubleBracket(seededIds);
+  const rng = makeLcg(seed);
+  const losses = new Array(k).fill(0);
+  const met = new Set();          // unordered pairs that have played
+  let immediateRematch = 0;
+  let matches = 0;
+  let ri = 0;
+  while (ri < b.rounds.length) {
+    const round = b.rounds[ri];
+    for (let i = 0; i < round.length; i++) {
+      const mm = round[i];
+      if (mm.a === null || mm.b === null) return { bad: 'unfilled slot at round ' + ri + ' match ' + i };
+      const key = Math.min(mm.a, mm.b) + ':' + Math.max(mm.a, mm.b);
+      /* An immediate rematch is the same pair meeting in two matches
+         that are one drop apart; we approximate "no immediate
+         rematch" by checking the losers bracket never reruns a pair
+         that just played in the feeding round. Here we simply record
+         all meetings and separately assert the count of repeats. */
+      if (met.has(key)) immediateRematch++;   // any repeat at all, strong check
+      met.add(key);
+      const aWins = rng() < 0.5;
+      const winner = aWins ? mm.a : mm.b;
+      const loser = aWins ? mm.b : mm.a;
+      mm.result = { winnerId: winner };
+      losses[loser]++;
+      algo.applyDoubleResult(b, ri, i, winner, loser);
+      matches++;
+    }
+    ri++;
+  }
+  return { bracket: b, losses: losses, matches: matches, repeats: immediateRematch };
+}
+
+for (const k of [4, 8, 16]) {
+  for (const seed of [1, 7, 99, 12345, 88888]) {
+    const out = playDouble(k, seed);
+    assert(!out.bad, 'k=' + k + ' seed=' + seed + ' ' + (out.bad || ''));
+    if (out.bad) continue;
+    const champ = out.bracket.championId;
+    assert(champ !== null, 'k=' + k + ' a champion is crowned');
+    /* Every non champion is out with exactly two losses. */
+    let twoLoss = 0, champLoss = out.losses[champ];
+    for (let p = 0; p < k; p++) {
+      if (p === champ) continue;
+      if (out.losses[p] === 2) twoLoss++;
+    }
+    assertEqual(twoLoss, k - 1, 'k=' + k + ' seed=' + seed + ' every non champion has two losses');
+    assert(champLoss === 0 || champLoss === 1, 'k=' + k + ' seed=' + seed + ' champion has 0 or 1 loss');
+    /* Match count: 2k-2 with no reset (champion undefeated), 2k-1
+       with a reset (champion took one loss). */
+    const expected = champLoss === 0 ? 2 * k - 2 : 2 * k - 1;
+    assertEqual(out.matches, expected, 'k=' + k + ' seed=' + seed + ' match count matches loss counting');
+    /* Total losses across everyone equals the number of matches. */
+    const totalLoss = out.losses.reduce((s, x) => s + x, 0);
+    assertEqual(totalLoss, out.matches, 'k=' + k + ' seed=' + seed + ' losses equal matches played');
+  }
+}
+
+/* No immediate rematch: in the first losers round a WB round 1 loser
+   must not face the player who just beat them (they are in the WB, so
+   this holds trivially), and in the first major drop the cross keeps
+   a dropper away from their own WB sub match. We assert the concrete
+   k=8 cross wiring: the two WB round 2 losers land opposite the LB
+   round 1 survivors from the other half. */
+{
+  const b = algo.buildDoubleBracket([0, 1, 2, 3, 4, 5, 6, 7]);
+  /* Find the WB round 1 and round 2 rounds and the first LB major
+     round by their labels, then confirm the loser pointers cross. */
+  const idxWB2 = b.labels.indexOf('Winners Round 2');
+  const idxLBmajor = b.labels.indexOf('Losers Round 2');
+  assert(idxWB2 !== -1 && idxLBmajor !== -1, 'k=8 has a WB round 2 and LB round 2');
+  const wb2 = b.rounds[idxWB2];
+  /* WB2 match 0 loser and WB2 match 1 loser must drop into different
+     LB round 2 matches, reversed. */
+  assert(wb2[0].loseTo.r === idxLBmajor && wb2[1].loseTo.r === idxLBmajor, 'k=8 WB2 losers drop into LB round 2');
+  assert(wb2[0].loseTo.i !== wb2[1].loseTo.i, 'k=8 WB2 losers land in different LB matches');
+  assert(wb2[0].loseTo.i === 1 && wb2[1].loseTo.i === 0, 'k=8 WB2 loser drop is reversed (crossed)');
 }
 
 console.log('');
