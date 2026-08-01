@@ -364,6 +364,22 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 .b-slot.won .b-seed { color: var(--gold); }
 .b-slot.lost .b-name, .b-slot.lost .b-score { color: var(--ink-faint); }
 
+/* Double elimination: three labeled bands (winners, losers, grand
+   final), each a row of round columns. Connectors are suppressed
+   here because the losers bracket rounds do not halve cleanly, so
+   plain labeled columns read more honestly than elbow lines. */
+.de-band { margin-bottom: 18px; }
+.de-band:last-child { margin-bottom: 0; }
+.de-band-title {
+  font: 600 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); margin: 0 0 8px 2px;
+}
+.de-band .b-match::after, .de-band .b-match::before, .de-band .b-pair::after { display: none; }
+.de-band .bracket { gap: 22px; }
+/* bracket-grid normally is a flex row of columns (single elim); in
+   double elim it stacks the three bands instead. */
+#bracket-grid.de-stack { display: block; overflow: visible; }
+
 /* Champion banner */
 .champion-banner {
   margin-top: 24px;
@@ -590,6 +606,12 @@ footer {
           <button class="btn btn-primary" id="btn-start">Start Tournament</button>
           <button class="btn" id="btn-pause" disabled>Pause</button>
         </div>
+        <div class="control-label">Knockout format</div>
+        <div class="seg" id="format-seg" role="group" aria-label="Knockout format">
+          <button type="button" data-format="single" class="active">Single elim</button>
+          <button type="button" data-format="double">Double elim</button>
+        </div>
+        <p class="hint" id="format-hint" style="margin-top:7px;">Single elimination: one loss and you are out (k-1 matches). Double elimination: a losers bracket gives everyone a second life, so more play (2k-2 matches). Applies when the knockout starts.</p>
         <div class="control-label">Speed</div>
         <div class="seg" id="speed-seg" role="group" aria-label="Simulation speed">
           <button type="button" data-speed="slow">Slow</button>
@@ -1469,6 +1491,7 @@ const state = {
   players: [],      // [{id, name, elo, startElo, wins, losses, played}]
   schedule: null,   // output of buildSchedule
   bracket: null,    // built after the group stage completes
+  bracketMode: 'single', // 'single' or 'double' knockout, chosen in the control card
   phase: 'setup',   // setup | ready | group | bracket | done
   diagramRound: 0   // round shown in the K_n matching diagram
 };
@@ -1630,6 +1653,8 @@ function bracketMatchHtml(m, r, i) {
 
 function renderBracket() {
   const b = state.bracket;
+  if (b.mode === 'double') { renderDoubleBracket(b); return; }
+  el('bracket-grid').classList.remove('de-stack');
   const names = bracketRoundNames(b.k);
   const cols = [];
   for (let r = 0; r < b.rounds.length; r++) {
@@ -1650,13 +1675,44 @@ function renderBracket() {
   el('bracket-grid').innerHTML = cols.join('');
 }
 
+/* Double elimination view: winners, losers, and grand final as three
+   labeled bands, each a row of round columns. Match card ids stay
+   bmatch-r-i (r indexing state.bracket.rounds) so the simulator's
+   preview and highlight hooks keep working unchanged. */
+function renderDoubleBracket(b) {
+  const bands = { W: [], L: [], GF: [] };
+  for (let r = 0; r < b.rounds.length; r++) {
+    const round = b.rounds[r];
+    const type = round[0].bracket;
+    const cards = round.map(function (m, i) { return bracketMatchHtml(m, r, i); }).join('');
+    const col = '<div class="b-round"><div class="b-round-title">' + escapeHtml(b.labels[r]) +
+      '</div><div class="b-matches">' + cards + '</div></div>';
+    (bands[type] || bands.GF).push(col);
+  }
+  function band(title, cols) {
+    if (!cols.length) return '';
+    return '<div class="de-band"><div class="de-band-title">' + title +
+      '</div><div class="bracket">' + cols.join('') + '</div></div>';
+  }
+  el('bracket-grid').classList.add('de-stack');
+  el('bracket-grid').innerHTML =
+    band('Winners bracket', bands.W) + band('Losers bracket', bands.L) + band('Grand final', bands.GF);
+}
+
 function renderBracketNote() {
   const b = state.bracket;
   const order = seedOrder(b.k);
   const pairs = [];
   for (let i = 0; i < order.length; i += 2) pairs.push(order[i] + ' vs ' + order[i + 1]);
+  if (b.mode === 'double') {
+    el('bracket-note').textContent =
+      'Top ' + b.k + ' by group standing, double elimination. The winners bracket is the ordinary seeded tree; a first loss drops you into the losers bracket, and a second loss ends your run. So every player except the champion leaves with exactly two losses, which works out to ' +
+      (2 * b.k - 2) + ' matches (one more if the grand final resets), against ' + (b.k - 1) +
+      ' for single elimination. The point is that everyone gets a second life and more games.';
+    return;
+  }
   el('bracket-note').textContent =
-    'Top ' + b.k + ' by group standing. First round by seed: ' + pairs.join(', ') +
+    'Top ' + b.k + ' by group standing, single elimination. First round by seed: ' + pairs.join(', ') +
     '. The bracket is a binary tree with the strongest seeds in opposite halves, so seeds 1 and 2 can only meet in the final.' +
     (b.k === 4 ? ' A field of 12 or more would send eight.' : '');
 }
@@ -2843,15 +2899,21 @@ function processItem(item) {
 
 /* The final is a longer race; everything else races to 5. */
 function raceToFor(item) {
-  if (item.phase === 'bracket' && item.round === state.bracket.rounds.length - 1) return RACE_TO_FINAL;
+  if (item.phase !== 'bracket') return RACE_TO_GROUP;
+  const m = state.bracket.rounds[item.round][item.index];
+  if (m.bracket === 'GF') return RACE_TO_FINAL;                                  // double elim grand final
+  if (m.bracket === undefined && item.round === state.bracket.rounds.length - 1) return RACE_TO_FINAL; // single elim final
   return RACE_TO_GROUP;
 }
 
-/* Group and knockout together: group matches plus the k-1 matches a
-   k player single elimination always takes (each match removes
-   exactly one player). */
+/* Group matches plus the knockout matches: k-1 for single
+   elimination (each match removes one player), or 2k-2 for double
+   elimination (every non champion needs two losses; a grand final
+   reset would add one more, handled by capping the progress bar). */
 function totalMatchTarget(N) {
-  return N * (N - 1) / 2 + qualifierCount(N) - 1;
+  const k = qualifierCount(N);
+  const knockout = state.bracketMode === 'double' ? 2 * k - 2 : k - 1;
+  return N * (N - 1) / 2 + knockout;
 }
 
 /* Resolves one match: simulate at the current ratings, transfer Elo
@@ -2884,11 +2946,21 @@ function processMatch(item) {
     setStatus('Round ' + (item.round + 1) + ': <strong>' + escapeHtml(winner.name) + '</strong> defeats ' +
       escapeHtml(loser.name) + ' ' + winnerRacks + '-' + loserRacks);
   } else {
-    advanceBracketWinner(item, winner.id);
+    const b = state.bracket;
+    let outcome = {};
+    if (b.mode === 'double') {
+      outcome = applyDoubleResult(b, item.round, item.index, winner.id, loser.id);
+      if (outcome.appended !== undefined) {
+        sim.queue.push({ kind: 'match', phase: 'bracket', round: outcome.appended, index: 0 });
+        sim.totalMatches++;   // a grand final reset adds one more game
+      }
+    } else {
+      advanceBracketWinner(item, winner.id);
+    }
     renderBracket();
     const card = el('bmatch-' + item.round + '-' + item.index);
     if (card) card.classList.add('just');
-    if (state.bracket.championId !== null) {
+    if (b.championId !== null) {
       state.phase = 'done';
       sim.running = false;
       renderChampion();
@@ -2906,10 +2978,14 @@ function processMatch(item) {
           }
         }, 700);
       }, 120);
-      setStatus('<strong>' + escapeHtml(winner.name) + '</strong> takes the final ' + winnerRacks + '-' +
+      setStatus('<strong>' + escapeHtml(winner.name) + '</strong> takes the title ' + winnerRacks + '-' +
         loserRacks + ' and wins the tournament.');
+    } else if (outcome.appended !== undefined) {
+      setStatus('<strong>' + escapeHtml(winner.name) +
+        '</strong> wins the grand final ' + winnerRacks + '-' + loserRacks +
+        ', so both have one loss: it goes to a deciding reset game.');
     } else {
-      const roundName = bracketRoundNames(state.bracket.k)[item.round];
+      const roundName = b.mode === 'double' ? b.labels[item.round] : bracketRoundNames(b.k)[item.round];
       setStatus(roundName + ': <strong>' + escapeHtml(winner.name) + '</strong> defeats ' +
         escapeHtml(loser.name) + ' ' + winnerRacks + '-' + loserRacks);
     }
@@ -2937,14 +3013,17 @@ function advanceBracketWinner(item, winnerId) {
 function processSeeding() {
   const k = qualifierCount(state.players.length);
   const seededIds = computeStandings().slice(0, k).map(function (p) { return p.id; });
-  state.bracket = buildBracket(seededIds);
+  state.bracket = state.bracketMode === 'double'
+    ? buildDoubleBracket(seededIds)
+    : buildBracket(seededIds);
   state.phase = 'bracket';
   highlightRound(-1);
   el('bracket-section').hidden = false;
   renderBracketNote();
   renderBracket();
   renderStandings(null);
-  setStatus('Group stage complete. Top ' + k + ' seeded into the knockout bracket.');
+  const kind = state.bracketMode === 'double' ? 'double elimination' : 'single elimination';
+  setStatus('Group stage complete. Top ' + k + ' seeded into the ' + kind + ' bracket.');
   for (let r = 0; r < state.bracket.rounds.length; r++) {
     for (let i = 0; i < state.bracket.rounds[r].length; i++) {
       sim.queue.push({ kind: 'match', phase: 'bracket', round: r, index: i });
@@ -3047,6 +3126,15 @@ el('speed-seg').addEventListener('click', function (event) {
   const buttons = el('speed-seg').querySelectorAll('button');
   for (const b of buttons) b.classList.toggle('active', b === button);
   if (sim.running && !sim.paused) scheduleNext(false);
+});
+el('format-seg').addEventListener('click', function (event) {
+  const button = event.target.closest('button[data-format]');
+  if (!button) return;
+  state.bracketMode = button.dataset.format;
+  const buttons = el('format-seg').querySelectorAll('button');
+  for (const b of buttons) b.classList.toggle('active', b === button);
+  sim.totalMatches = totalMatchTarget(state.players.length);
+  if (state.phase === 'ready') renderProgress();
 });
 el('preset-row').addEventListener('click', function (event) {
   const button = event.target.closest('button[data-preset]');
