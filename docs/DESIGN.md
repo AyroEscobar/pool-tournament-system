@@ -114,9 +114,12 @@ losses each is 2(k-1) losses, plus the champion's 0 or 1, so 2k-2 matches, or
 2k-1 when the grand final resets. `buildDoubleBracket` builds it for any k = 2^m:
 winners bracket (k-1 matches, the ordinary tree), losers bracket (2(m-1) rounds,
 k-2 matches, alternating minor rounds where losers survivors meet and major
-rounds where fresh winners losers drop in, crossed in reversed order so there is
-no immediate rematch), and a grand final with an optional reset game. Tested by
-playing full double eliminations out with a seeded RNG for k = 4, 8, 16.
+rounds where fresh winners losers drop in, crossed in reversed order so a
+dropping player meets a survivor from the opposite side of the draw, not their
+own quarter; rematches only become possible once the losers bracket narrows to
+single matches, as in any double elimination), and a grand final with an
+optional reset game. Tested by playing full double eliminations out with a
+seeded RNG for k = 4, 8, 16.
 
 ### 3.6 Carry-over effect (a documented limitation)
 
@@ -189,43 +192,62 @@ the seeded tree with the distance highlight, the double elimination bracket,
 and the carry-over heatmap. These can be screenshots of the app or clean static
 figures generated the same way as the homework figures.
 
-## 7. Proposed 10 minute live demo script
+## 7. The 10 minute live demo script
 
 Target: drive the app live, clearly display and defend the math. Timing is a
-guide.
+guide. The walkthrough advances with the left and right arrow keys, so hands
+stay on the keyboard while talking.
 
 - 0:00 to 1:00. Open the app on the default field. One sentence framing: a pool
   tournament is really a graph problem, and this shows the math behind every
   choice. Point at the group note and the verification panel (5 of 5).
-- 1:00 to 4:30. Guided Walkthrough, Act 1 (round robin). Step through K_6 and
-  the handshake lemma, a round as a perfect matching, the one-factorization,
-  the circle method rotation, and the congruence table. Say the proof out loud:
-  2 is invertible mod 5, so the rounds sweep every residue class once.
+- 1:00 to 4:30. Guided Walkthrough, Act 1 (round robin), arrow keys. Step
+  through K_6 and the handshake lemma, a round as a perfect matching, the
+  one-factorization, the circle method rotation, and the congruence table. Say
+  the proof out loud: 2 is invertible mod 5, so the rounds sweep every residue
+  class once.
 - 4:30 to 6:00. Act 2 (rating) briefly, then Act 3 (knockout tree): the doubling
   seed build, the pair sum invariant, and the distance property on the tree.
-- 6:00 to 7:30. Toggle to Double elimination, start a fast run, and narrate the
-  losers bracket: everyone gets a second life, and the loss counting gives
-  2k-2 matches. Show the grand final and champion.
-- 7:30 to 9:00. Carry-over coda: the heatmap and the point that the circle
-  method is provably the most unbalanced, with the citation.
+- 6:00 to 7:30. Switch Knockout format to Double elim, click the 13 example
+  (this regenerates the schedule), and press Start on Fast. Narrate the losers
+  bracket while it plays: everyone gets a second life, at least two games each,
+  and the loss counting gives 2k-2 matches (one more if the grand final resets).
+  Show the grand final and champion.
+- 7:30 to 9:00. Carry-over coda in the walkthrough: the heatmap and the point
+  that the circle method is provably the most unbalanced, with the citation.
 - 9:00 to 10:00. Wrap: the verification panel and the test suite as the
   correctness story, and the Student Union as the real use. Take questions.
 
 Backup: keep static screenshots of each key screen in case screen sharing the
-live app is unreliable.
+live app is unreliable (the report's figures cover them all).
 
-## 8. Open questions to settle before the final report
+Likely oral questions to be ready for: why 2 invertible mod n-1 closes the
+proof; why the race model inverts the negative binomial instead of reusing E;
+why seeds 1 and 2 cannot meet early (subtree isolation); why double elimination
+is 2k-2 by loss counting, and when rematches can occur (only once the losers
+bracket narrows; at k = 4 the losers final is forced); and why the circle
+method is the maximum carry-over schedule and what balanced alternatives exist
+(Russell, powers of two).
 
-1. Audience and depth: write for the professor (assume comfort with modular
-   arithmetic and graph theory) or for a general reader (explain more basics)?
-2. Length: hard 10 pages, or about 10? Affects how much of the proofs and the
-   double elimination detail to include in full.
-3. Default knockout for the demo: open in single elimination (cleaner tree for
-   the teaching flow) or double elimination (leads with the second life idea)?
-4. Figures: app screenshots, or clean static figures generated separately (like
-   the homework), or both?
-5. Emphasis: is there anything the professor specifically wants highlighted (a
-   particular theorem, the real world application, the verification story)?
-6. Any additional feature before the report freezes (for example a balanced or
-   Berger schedule to contrast the circle method's carry-over), or is the
-   current scope the final scope?
+## 8. Decisions settled, and what remains open
+
+Settled:
+
+1. Scope is frozen with double elimination included; no balanced or Berger
+   schedule contrast (mentioned in the report as future work territory only).
+2. Audience is the professor: comfort with modular arithmetic and graph theory
+   assumed, proofs kept tight and complete (theorem for the circle method,
+   lemma for subtree isolation).
+3. Format is a polished LaTeX PDF, ten pages, at docs/report.pdf, with TikZ
+   figures plus three app screenshots (walkthrough proof step, completed double
+   elimination with a reset, carry-over heatmap).
+4. The talk is a live app demo driven by the walkthrough with arrow keys; the
+   app opens in single elimination and the demo toggles to double for the live
+   run. Script in section 7.
+
+Still open (ask the professor if possible):
+
+1. Any rubric or required sections for the report, and whether ten pages is a
+   hard requirement or a target.
+2. Anything the professor specifically wants highlighted (a particular theorem,
+   the real world application, or the verification story).
