@@ -232,8 +232,6 @@ function playDouble(k, seed) {
   const b = algo.buildDoubleBracket(seededIds);
   const rng = makeLcg(seed);
   const losses = new Array(k).fill(0);
-  const met = new Set();          // unordered pairs that have played
-  let immediateRematch = 0;
   let matches = 0;
   let ri = 0;
   while (ri < b.rounds.length) {
@@ -241,14 +239,12 @@ function playDouble(k, seed) {
     for (let i = 0; i < round.length; i++) {
       const mm = round[i];
       if (mm.a === null || mm.b === null) return { bad: 'unfilled slot at round ' + ri + ' match ' + i };
-      const key = Math.min(mm.a, mm.b) + ':' + Math.max(mm.a, mm.b);
-      /* An immediate rematch is the same pair meeting in two matches
-         that are one drop apart; we approximate "no immediate
-         rematch" by checking the losers bracket never reruns a pair
-         that just played in the feeding round. Here we simply record
-         all meetings and separately assert the count of repeats. */
-      if (met.has(key)) immediateRematch++;   // any repeat at all, strong check
-      met.add(key);
+      /* Note: repeated pairings are NOT asserted away here, because
+         legitimate rematches occur in any double elimination once
+         the losers bracket narrows (and the grand final itself can
+         be a winners final rematch). The structural anti-rematch
+         property, crossed drops at the first major round, is
+         asserted separately below. */
       const aWins = rng() < 0.5;
       const winner = aWins ? mm.a : mm.b;
       const loser = aWins ? mm.b : mm.a;
@@ -259,7 +255,7 @@ function playDouble(k, seed) {
     }
     ri++;
   }
-  return { bracket: b, losses: losses, matches: matches, repeats: immediateRematch };
+  return { bracket: b, losses: losses, matches: matches };
 }
 
 for (const k of [4, 8, 16]) {
@@ -287,12 +283,12 @@ for (const k of [4, 8, 16]) {
   }
 }
 
-/* No immediate rematch: in the first losers round a WB round 1 loser
-   must not face the player who just beat them (they are in the WB, so
-   this holds trivially), and in the first major drop the cross keeps
-   a dropper away from their own WB sub match. We assert the concrete
-   k=8 cross wiring: the two WB round 2 losers land opposite the LB
-   round 1 survivors from the other half. */
+/* Crossed drops: at the first major round each WB round 2 loser must
+   land against the LB survivor from the OTHER half of the draw, so a
+   dropping player cannot meet anyone from their own quarter (in
+   particular not the opponent they beat in WB round 1, who feeds the
+   same-side LB match). We assert the concrete k=8 cross wiring:
+   the two WB round 2 losers land in reversed LB round 2 slots. */
 {
   const b = algo.buildDoubleBracket([0, 1, 2, 3, 4, 5, 6, 7]);
   /* Find the WB round 1 and round 2 rounds and the first LB major
