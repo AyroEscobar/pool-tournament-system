@@ -282,12 +282,33 @@ seeds $1$ and $2$ can meet only in the final.}
 \label{fig:tree}
 \end{figure}
 
-The distance property is exact. If $\mathrm{pos}(s)$ is a seed's leaf index in
-$S(k)$, then two seeds meet no earlier than the round given by the height of their
-lowest common ancestor, which is one plus the index of the highest differing bit of
-their leaf indices. The application computes this as \texttt{seedMeetRound}: seeds
-$1$ and $2$ meet only in the final, seeds $1$ through $4$ no earlier than the
-semifinals. A single elimination of $k$ players is exactly $k-1$ matches, since each
+The placement's fairness guarantee can be stated and proved exactly.
+
+\begin{lemma}[Subtree isolation]
+In the bracket built from $S(k)$, every subtree with $2^j$ leaves contains exactly
+one of the top $k/2^j$ seeds.
+\end{lemma}
+
+\begin{proof}
+Induct on the doubling. For $S(2) = [1,2]$ the claim is immediate. Assume it holds
+for $S(m)$ and build $S(2m)$. The size two subtrees of the new bracket are exactly
+the pairs $(s,\ 2m+1-s)$ with $s \in S(m)$, and since $s \le m < 2m+1-s$, each
+contains exactly one of the top $m$ seeds; that is the $j=1$ case. Now contract
+every pair to its smaller member. By construction this turns the $S(2m)$ bracket
+into precisely the $S(m)$ bracket, and a subtree with $2^j$ leaves ($j \ge 1$)
+contracts to one with $2^{j-1}$ leaves, which by the induction hypothesis contains
+exactly one of the top $m/2^{j-1} = 2m/2^j$ seeds. The discarded partners all
+exceed $m$, hence also $2m/2^j$, so the count is unchanged.
+\end{proof}
+
+Two players meet exactly when the knockout reaches the root of the smallest
+subtree containing both, so the lemma pins down who can meet when: the top $2^t$
+seeds occupy $2^t$ different subtrees of size $k/2^t$, hence no two of them can
+meet before the round with $2^t$ players left. In particular seeds $1$ and $2$ can
+meet only in the final, and seeds $1$ through $4$ no earlier than the semifinals.
+The application computes the exact earliest meeting round as
+\texttt{seedMeetRound}, the height of the two leaves' lowest common ancestor in
+the tree. A single elimination of $k$ players is exactly $k-1$ matches, since each
 match produces one loss and $k-1$ players must be eliminated once.
 
 \subsection{Double elimination and the second life}
@@ -334,15 +355,37 @@ of matches is
 The reset arises because the WB champion enters the grand final undefeated: if the
 LB champion wins the first grand final game, both then have one loss, so a single
 deciding game is played. For $k=8$ this is $14$ or $15$ matches against $7$ for
-single elimination.
+single elimination. Table~\ref{tab:formats} summarizes the tradeoff.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+ & single elimination & double elimination \\
+\midrule
+eliminated after & $1$ loss & $2$ losses \\
+matches for $k$ seeds & $k-1$ & $2k-2$ (reset: $2k-1$) \\
+rounds for $k=8$ & $3$ & $8$ \\
+minimum matches per player & $1$ & $2$ \\
+survives one unlucky match & no & yes \\
+\bottomrule
+\end{tabular}
+\caption{The knockout tradeoff. Double elimination roughly doubles the play and
+guarantees every entrant at least two matches, at the cost of a longer event; the
+application offers both, chosen with a format toggle.}
+\label{tab:formats}
+\end{table}
 
 The construction \texttt{buildDoubleBracket} handles any $k = 2^m$. The winners
 bracket is the ordinary seeded tree ($k-1$ matches). The losers bracket has
 $2(m-1)$ rounds ($k-2$ matches) that alternate minor rounds, where losers bracket
 survivors meet, and major rounds, where fresh winners bracket losers drop in. The
-drops are crossed in reversed order so that a player never meets, in the round they
-drop into, anyone from the winners match they just came through: there is no
-immediate rematch. The whole bracket is built as a list of matches already
+drops are crossed in reversed order, so a dropping player meets a survivor from the
+opposite side of the draw rather than someone from their own quarter. This avoids
+rematches for as long as the bracket is wide enough to permit it; once the losers
+bracket narrows to single matches, rematches can occur, as in any double
+elimination (for $k=4$ they are already unavoidable, since the losers final has
+only one possible pairing). The whole bracket is built as a list of matches already
 interleaved into a valid play order, each carrying a pointer to where its winner and
 its loser go next, so a single match queue drives the simulation. For $k=8$ ($m=3$)
 the losers bracket rounds hold $2, 2, 1, 1$ matches, six in all ($k-2$), so a full
@@ -390,6 +433,30 @@ balanced designs, available whenever $n$ is a power of two, recover the minimum 
 the cost of the simple rotation and its one line proof, which is the tradeoff a real
 event has to weigh.
 
+\section{Presenting the mathematics: the guided walkthrough}
+
+Because the point of the project is the mathematics, the application does not just
+use these results, it teaches them. A built in \emph{guided walkthrough} presents
+the two core algorithms in eighteen steps across four acts (round robin, rating,
+knockout tree, carry-over), each step pairing a short narration with a live
+visual: the $K_6$ diagram inking one matching per rotation with chalk residue, the
+congruence table of Table~\ref{tab:cong} computed from the shipped scheduler
+(Figure~\ref{fig:walk}), the doubling seed order built pass by pass, the meeting
+round highlighted on the tree, and the carry-over heatmap. The walkthrough runs on
+a fixed teaching field, independent of the loaded roster, so it presents
+identically every time, and it advances by button or arrow key, which is how the
+ten minute live demonstration of this project is delivered: the walkthrough
+carries the theory, and the live tournament run carries the practice.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.97\textwidth]{report_walkthrough.png}
+\caption{The walkthrough at the proof step of Act 1. The congruence table on the
+right is generated live from the shipped \texttt{buildSchedule}, so the displayed
+proof and the running code cannot disagree.}
+\label{fig:walk}
+\end{figure}
+
 \section{Verification and results}
 
 Correctness is established two ways. First, the application's algorithms live in a
@@ -403,17 +470,21 @@ $2k-2$ or $2k-1$ match count for $k = 4, 8, 16$. Second, the in application
 verification panel recomputes the round robin's five structural properties from the
 generated schedule on every run.
 
-Figure~\ref{fig:app} shows the double elimination bracket the application produces
-for a field of thirteen (top eight seeded): the winners bracket, the losers bracket
-with its alternating rounds, and the grand final. Fields up to thirty players keep
-every guarantee: at $n=30$ the group stage is $29$ rounds and $435$ matches, all
-five checks pass, and Elo is conserved.
+Figure~\ref{fig:app} shows a completed double elimination the application played
+for a field of thirteen (top eight seeded). The run displays every piece of the
+mathematics at once: the eighth seed upsets the first in the opening round, first
+losses drop into the losers bracket and climb back through its alternating rounds,
+the losers champion takes the first grand final game, and the reset game decides
+the title, $15 = 2k-1$ matches in all. Fields up to thirty players keep every
+guarantee: at $n=30$ the group stage is $29$ rounds and $435$ matches, all five
+checks pass, and Elo is conserved.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.94\textwidth]{report_de_bracket.png}
-\caption{The application's double elimination view: winners bracket (seeded tree),
-losers bracket (six matches over four rounds for $k=8$), and grand final.}
+\caption{A completed double elimination in the application: the winners bracket
+(the seeded tree), the losers bracket (six matches over four rounds for $k=8$),
+and a grand final that went to the reset game.}
 \label{fig:app}
 \end{figure}
 
