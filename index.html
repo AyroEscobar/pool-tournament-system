@@ -376,6 +376,9 @@ tr.rowflash td { animation: rowpulse 1.1s ease-out; }
 }
 .de-band .b-match::after, .de-band .b-match::before, .de-band .b-pair::after { display: none; }
 .de-band .bracket { gap: 22px; }
+/* Fixed width columns: a lone grand final card should not stretch
+   across the whole page. */
+.de-band .b-round { flex: 0 0 236px; min-width: 236px; }
 /* bracket-grid normally is a flex row of columns (single elim); in
    double elim it stacks the three bands instead. */
 #bracket-grid.de-stack { display: block; overflow: visible; }
@@ -673,7 +676,7 @@ footer {
 
   <section id="walk-section" hidden>
     <h2 class="section-title">Guided Walkthrough</h2>
-    <p class="section-note">The two discrete-math algorithms behind the tournament, one step at a time, worked on a small field so every number stays on screen. Click Next to present it.</p>
+    <p class="section-note">The two discrete-math algorithms behind the tournament, one step at a time, worked on a small field so every number stays on screen. Click Next, or drive it with the left and right arrow keys.</p>
     <div class="card walk">
       <div class="walk-top">
         <div class="walk-acts" id="walk-acts" role="tablist" aria-label="Walkthrough acts"></div>
@@ -807,7 +810,7 @@ footer {
   </section>
 
   <footer>
-    Scheduling: circle method (a one-factorization of K<sub>n</sub>). Simulation: Elo expectation with calibrated race scores. Knockout: standard seeded single elimination. Built for CS 4302 at UT Dallas.
+    Scheduling: circle method (a one-factorization of K<sub>n</sub>). Simulation: Elo expectation with calibrated race scores. Knockout: seeded single or double elimination. Built for CS 4302 at UT Dallas.
   </footer>
 
 </div>
@@ -1167,9 +1170,13 @@ function buildBracket(seededIds) {
            minor rounds (LB survivors play each other) and
            major rounds (fresh WB losers drop in).
          Major rounds cross the incoming WB losers against the LB
-         survivors in reversed order, so a player never meets, in
-         the round they drop into, anyone from the WB match they
-         just came through: no immediate rematch.
+         survivors in reversed order, so a dropping player meets a
+         survivor from the opposite side of the draw rather than
+         someone from their own quarter. That avoids rematches while
+         the bracket is wide enough to permit it; once the LB
+         narrows to single matches rematches can occur, as in any
+         double elimination (at k = 4 the losers final has only one
+         possible pairing, so there they are unavoidable).
      GF: WB champion (0 losses) vs LB champion (1 loss). If the WB
          champion wins, done. If the LB champion wins, both now have
          one loss, so a single deciding reset game is played.
@@ -1807,7 +1814,9 @@ function renderMathPanel() {
     'seeds, internal nodes are matches, the root is the final. Placement follows <strong>seedOrder(' + k +
     ') = [' + order.join(', ') + ']</strong>, read pairwise as ' + pairs.join(', ') +
     '. Every first round pairing sums to ' + (k + 1) +
-    ', the strongest against the weakest, and seeds 1 and 2 sit in opposite halves, so the earliest they can meet is the final. That protection is the reward for winning the group.';
+    ', the strongest against the weakest, and seeds 1 and 2 sit in opposite halves, so the earliest they can meet is the final. That protection is the reward for winning the group. The knockout runs single elimination (' +
+    (k - 1) + ' matches) or double elimination (' + (2 * k - 2) +
+    ', with every player guaranteed at least two games) by the format toggle; both build on this same seeded tree.';
 
   el('seed-recurrence').innerHTML =
     'S(1) = [1],&nbsp;&nbsp;S(2k) = [ s, 2k+1-s : s ∈ S(k) ]<br>' +
@@ -2631,7 +2640,7 @@ function walkActBracket() {
       title: 'The top finishers seed a binary tree',
       narr: '<p>The group stage ranks everyone. The top 8 by standings (wins, then Elo) advance to a <strong>single-elimination knockout</strong>, which is a <strong>complete binary tree</strong>: the 8 seeds are the leaves, every internal node is a match, and the root is the final.</p>' +
         '<p>Counting is immediate: 8 leaves collapse to 1 champion, and each match removes exactly one player, so there are 8 - 1 = <span class="hl">7 matches</span>. Every knockout of k players is k - 1 matches, the cleanest counting argument in the whole system.</p>' +
-        '<p>Real pool usually runs <strong>double elimination</strong> instead, a second life where you must lose twice to be out. Same loss-counting logic: k - 1 players each take 2 losses, so it is 2k - 2 matches (2k - 1 if the final resets). Here we use single elimination for a clean tree.</p>',
+        '<p>Real pool usually runs <strong>double elimination</strong> instead, a second life where you must lose twice to be out. Same loss-counting logic: k - 1 players each take 2 losses, so it is 2k - 2 matches (2k - 1 if the final resets). The app runs both, chosen with the Knockout format toggle; this act teaches the single elimination tree, which double elimination reuses as its winners bracket.</p>',
       math: 'single elim: matches = k - 1 = <span class="accent">7</span> (each removes one player)<br>double elim: 2k - 2 = 14, since k - 1 players take 2 losses each',
       view: function () { return walkTreeSvg(null, null); }
     },
@@ -2663,7 +2672,7 @@ function walkActBracket() {
       act: A, kicker: 'Knockout tree, done',
       title: 'Semifinals for 1 and 4, then a champion',
       narr: '<p>Same rule, one level down: seeds 1 and 4 share a half but sit in different quarters, so the earliest they can meet is the <strong>semifinal</strong>. Winning the group is worth real protection, it keeps the dangerous seeds apart for as long as possible.</p>' +
-        '<p>From here the winners advance up the tree until one player remains at the root. The live <strong>Knockout Bracket</strong> above plays exactly this out with the Elo simulation, and crowns the champion.</p>',
+        '<p>From here the winners advance up the tree until one player remains at the root. The live <strong>Knockout Bracket</strong> above plays exactly this out with the Elo simulation, and crowns the champion. In double elimination this same seeded tree is the winners bracket, and a losers bracket catches every first loss.</p>',
       math: 'seedMeetRound(8, 1, 4) = <span class="accent">2</span> (the semifinals)<br>champion emerges at the root after log₂ 8 = 3 rounds',
       view: function () { return walkTreeSvg(1, 4); }
     }
@@ -3133,8 +3142,14 @@ el('format-seg').addEventListener('click', function (event) {
   state.bracketMode = button.dataset.format;
   const buttons = el('format-seg').querySelectorAll('button');
   for (const b of buttons) b.classList.toggle('active', b === button);
-  sim.totalMatches = totalMatchTarget(state.players.length);
-  if (state.phase === 'ready') renderProgress();
+  /* The knockout is built at seeding time, so a change made before
+     then retargets the progress meter now; once a bracket exists the
+     choice simply applies from the next generate, and the in flight
+     bracket keeps its own match target. */
+  if (state.phase === 'ready' || state.phase === 'group') {
+    sim.totalMatches = totalMatchTarget(state.players.length);
+    renderProgress();
+  }
 });
 el('preset-row').addEventListener('click', function (event) {
   const button = event.target.closest('button[data-preset]');
@@ -3154,6 +3169,17 @@ el('walk-acts').addEventListener('click', function (event) {
   if (!button) return;
   walkStopAutoplay();
   walkTo(parseInt(button.dataset.jump, 10));
+});
+/* Arrow keys drive the walkthrough, which keeps a live presentation
+   hands on the keyboard. Ignored while typing in the roster box or
+   while the section is hidden. */
+document.addEventListener('keydown', function (event) {
+  if (el('walk-section').hidden) return;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const t = event.target;
+  if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.tagName === 'SELECT')) return;
+  if (event.key === 'ArrowRight') { walkStopAutoplay(); walkNext(); event.preventDefault(); }
+  else if (event.key === 'ArrowLeft') { walkStopAutoplay(); walkTo(WALK.i - 1); event.preventDefault(); }
 });
 walkBuildSteps();
 walkTo(0);
