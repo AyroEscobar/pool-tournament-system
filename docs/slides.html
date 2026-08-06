@@ -53,6 +53,22 @@
 </section>
 
 <section class="slide">
+  <div class="kicker">Before anything: what every letter is</div>
+  <h2>The symbols</h2>
+  <table style="margin-top:2vh">
+    <tr><th>symbol</th><th>what it is</th><th>example</th></tr>
+    <tr><td><span class="var">R<sub>A</sub></span>, <span class="var">R<sub>B</sub></span></td><td>the two players' Elo ratings: one number each, meaning skill</td><td>Marcus 1685, Sofia 1333</td></tr>
+    <tr><td><span class="var">E<sub>A</sub></span></td><td>chance player A wins, between 0 and 1. And <span class="var">E<sub>B</sub></span> = 1 &minus; <span class="var">E<sub>A</sub></span></td><td>0.88 and 0.12</td></tr>
+    <tr><td><span class="var">S</span></td><td>what actually happened: 1 for a win, 0 for a loss</td><td>Marcus wins: S = 1</td></tr>
+    <tr><td><span class="var">K</span></td><td>how fast ratings move, fixed at 32</td><td>max swing 32 points</td></tr>
+    <tr><td><span class="var">n</span></td><td>number of players; <span class="var">K<sub>n</sub></span> is the complete graph on them</td><td>n = 8, K<sub>8</sub></td></tr>
+    <tr><td><span class="var">N</span>, <span class="var">q</span></td><td>race length in racks, and the chance of winning one rack</td><td>first to 5; q = 0.586</td></tr>
+    <tr><td><span class="var">r</span>, <span class="var">i</span>, <span class="var">j</span></td><td>round number, and two players' seat numbers on the ring</td><td>round 0 to 4; seats 1 to 5</td></tr>
+    <tr><td><span class="var">G</span>, &Gamma;</td><td>carry-over tally between players, and its total imbalance</td><td>&Gamma; = 60 on K<sub>6</sub></td></tr>
+  </table>
+</section>
+
+<section class="slide">
   <div class="kicker">1 &middot; Rating players</div>
   <h2>Elo expectation</h2>
   <div class="eq"><span class="var">E<sub>A</sub></span> =
