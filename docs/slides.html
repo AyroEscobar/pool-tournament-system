@@ -9,32 +9,35 @@
   * { box-sizing:border-box; margin:0; }
   html, body { height:100%; }
   body { background:var(--paper); color:var(--ink); font:18px/1.55 Georgia, "Times New Roman", serif; overflow:hidden; }
-  .slide { display:none; height:100vh; padding:5vh 8vw; flex-direction:column; justify-content:center; }
+  .slide { display:none; height:100vh; padding:4vh 7vw; flex-direction:column; justify-content:center; }
   .slide.on { display:flex; }
-  .kicker { font:600 14px -apple-system, Helvetica, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:var(--brass); margin-bottom:10px; }
+  .kicker { font:600 14px -apple-system, Helvetica, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:var(--brass); margin-bottom:8px; }
   h1 { font-size:52px; line-height:1.15; margin-bottom:14px; }
-  h2 { font-size:34px; margin-bottom:6px; }
-  .eq { font-size:min(5.2vw, 54px); text-align:center; margin:5vh 0; line-height:1.9; }
+  h2 { font-size:32px; margin-bottom:4px; }
+  .eq { font-size:min(3.4vw, 34px); text-align:center; margin:2.5vh 0 1.5vh; line-height:1.8; color:var(--ink2); }
   .var { font-style:italic; }
   sup { font-size:55%; } sub { font-size:55%; }
   .frac { display:inline-block; vertical-align:middle; text-align:center; line-height:1.15; margin:0 .12em; }
-  .frac .top { display:block; border-bottom:2.5px solid var(--ink); padding:0 .3em .06em; }
+  .frac .top { display:block; border-bottom:2px solid currentColor; padding:0 .3em .06em; }
   .frac .bot { display:block; padding-top:.06em; }
   .sum { display:inline-block; vertical-align:middle; text-align:center; line-height:1; margin:0 .15em; }
   .sum .lim { display:block; font-size:32%; }
   .sum .sig { display:block; font-size:120%; }
-  .say { max-width:900px; margin:0 auto; }
-  .say p { margin:10px 0; font-size:21px; }
-  .say b { font:600 13px -apple-system, Helvetica, sans-serif; letter-spacing:.09em; text-transform:uppercase; color:var(--brass); display:block; margin-bottom:2px; }
-  .aloud { background:var(--hl); border:1.5px solid var(--brass); border-radius:10px; padding:12px 18px; }
+  .eqen { background:var(--hl); border:2px solid var(--brass); border-radius:12px; padding:2.2vh 2.5vw; margin:1vh auto 2vh; max-width:980px; }
+  .eqen .tag { font:700 12px -apple-system, Helvetica, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:var(--brass); display:block; text-align:center; margin-bottom:6px; }
+  .eqen .words { font-size:min(3vw, 30px); text-align:center; line-height:1.6; font-weight:bold; }
+  .eqen .sub { font-size:min(2vw, 19px); text-align:center; color:var(--ink2); margin-top:6px; font-weight:normal; }
+  .say { max-width:940px; margin:0 auto; }
+  .say p { margin:8px 0; font-size:20px; }
+  .say b { font:600 13px -apple-system, Helvetica, sans-serif; letter-spacing:.09em; text-transform:uppercase; color:var(--brass); margin-right:8px; }
   .nums { color:var(--ink2); font-size:18px; }
   .hud { position:fixed; bottom:14px; right:20px; font:600 13px -apple-system, Helvetica, sans-serif; color:var(--ink2); }
   .hint { position:fixed; bottom:14px; left:20px; font:600 13px -apple-system, Helvetica, sans-serif; color:var(--ink2); }
   ul.toc { font-size:24px; line-height:1.9; list-style:none; }
   ul.toc span { color:var(--brass); font-weight:bold; margin-right:10px; }
   table { border-collapse:collapse; margin:16px auto 0; }
-  th, td { border:1px solid var(--line); padding:6px 16px; text-align:center; font-size:19px; }
-  th { background:#f3eee2; font-family:-apple-system, Helvetica, sans-serif; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:6px 14px; text-align:center; font-size:18px; }
+  th { background:#f3eee2; font-family:-apple-system, Helvetica, sans-serif; font-size:13px; }
 </style>
 </head>
 <body>
@@ -45,7 +48,7 @@
   <p style="font-size:24px">Ayro Escobar</p>
   <ul class="toc" style="margin-top:4vh">
     <li><span>1</span> Rating players: Elo and the race model</li>
-    <li><span>2</span> Counting the event: handshake lemma and real duration</li>
+    <li><span>2</span> Counting the event: total matches and real duration</li>
     <li><span>3</span> Scheduling: the circle method, with proof</li>
     <li><span>4</span> The knockout: seeded trees and loss counting</li>
     <li><span>5</span> An honest limitation: carry-over</li>
@@ -70,66 +73,78 @@
 
 <section class="slide">
   <div class="kicker">1 &middot; Rating players</div>
-  <h2>Elo expectation</h2>
+  <h2>Elo expectation: who should win?</h2>
   <div class="eq"><span class="var">E<sub>A</sub></span> =
     <span class="frac"><span class="top">1</span><span class="bot">1 + 10<sup>(<span class="var">R<sub>B</sub></span> &minus; <span class="var">R<sub>A</sub></span>) / 400</sup></span></span>
   </div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">chance A wins = 1 &divide; ( 1 + 10 ^ ( rating gap &divide; 400 ) )</div>
+    <div class="sub">rating gap = B's rating &minus; A's rating &nbsp;&middot;&nbsp; chance B wins = 1 &minus; chance A wins</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"E of A equals one, divided by one plus ten, raised to the power of R B minus R A, over four hundred."</p>
-    <p><b>What it means</b>Your win chance depends only on the rating gap. A 400 point gap makes you ten times more likely to win. Equal ratings give exactly one half.</p>
-    <p class="nums"><b>Real numbers</b>1650 vs 1500 gives E = 0.703: the stronger player wins about 70% of matches.</p>
+    <p><b>Meaning</b>Only the gap matters. 400 points of gap = ten times more likely to win. Equal ratings = fifty fifty.</p>
+    <p class="nums"><b>Real numbers</b>Marcus 1685 vs Sofia 1333: chance Marcus wins = 0.88, so chance Sofia wins = 0.12.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">1 &middot; Rating players</div>
-  <h2>Elo update</h2>
+  <h2>Elo update: how ratings move</h2>
   <div class="eq"><span class="var">R&prime;</span> = <span class="var">R</span> + <span class="var">K</span>(<span class="var">S</span> &minus; <span class="var">E</span>), &nbsp; <span class="var">K</span> = 32</div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">new rating = old rating + 32 &times; ( result &minus; expected chance )</div>
+    <div class="sub">result = 1 for a win, 0 for a loss</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"R new equals R old, plus K times S minus E. K is thirty two, and S is one for a win, zero for a loss."</p>
-    <p><b>What it means</b>You gain K times how surprising the result was. The winner's gain equals the loser's loss, so rating points are conserved. Upsets pay more, because when E was small, S minus E is nearly one.</p>
-    <p class="nums"><b>Real numbers</b>An underdog at E = 0.389 who wins gets 32 &times; 0.611 = +19.6. A favorite winning the same match gets only +12.4.</p>
+    <p><b>Meaning</b>Ratings move by how surprising the result was. Expected wins barely move; upsets move a lot. Winner's gain = loser's loss, points are conserved.</p>
+    <p class="nums"><b>Real numbers</b>Sofia (0.12 expected) upsets Marcus: 1333 + 32 &times; (1 &minus; 0.12) = +28 for her, &minus;28 for him. If Marcus wins as expected, only &plusmn;3.8.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">1 &middot; Rating players</div>
-  <h2>The race model</h2>
+  <h2>The race model: racks to matches</h2>
   <div class="eq"><span class="var">P</span>(<span class="var">N</span>, <span class="var">q</span>) =
     <span class="sum"><span class="lim"><span class="var">N</span>&minus;1</span><span class="sig">&Sigma;</span><span class="lim"><span class="var">k</span>=0</span></span>
     C(<span class="var">N</span>&minus;1+<span class="var">k</span>, <span class="var">k</span>) &nbsp;
     <span class="var">q</span><sup><span class="var">N</span></sup> (1&minus;<span class="var">q</span>)<sup><span class="var">k</span></sup>
   </div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">match chance = add up, for every score the loser could end with: (ways that score can happen) &times; (chance of that rack sequence)</div>
+    <div class="sub">a match is a race: first to 5 racks, the final first to 7</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"P of N and q equals the sum, for k from zero to N minus one, of N minus one plus k choose k, times q to the N, times one minus q to the k."</p>
-    <p><b>What it means</b>The chance of winning a race to N racks when each rack is a coin with probability q. I solve it backwards by bisection: find the q whose match odds equal the Elo odds exactly, instead of letting a long race inflate the favorite.</p>
-    <p class="nums"><b>Real numbers</b>E = 0.703 gives q = 0.586. Using 0.703 directly would blow the match odds up to 0.905.</p>
+    <p><b>Meaning</b>Long races favor the favorite too much, so I solve this backwards: find the per rack chance whose match odds equal the Elo odds exactly.</p>
+    <p class="nums"><b>Real numbers</b>Elo says 0.703. Solving backwards gives rack chance 0.586. Plugging 0.703 in directly would inflate the match odds to 0.905, unfair to the underdog.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">2 &middot; Counting the event</div>
-  <h2>Handshake lemma</h2>
+  <h2>Total matches</h2>
   <div class="eq">|<span class="var">E</span>(<span class="var">K<sub>n</sub></span>)| =
-    <span class="frac"><span class="top">1</span><span class="bot">2</span></span>
-    <span class="sum"><span class="sig">&Sigma;</span><span class="lim"><span class="var">v</span></span></span> deg(<span class="var">v</span>) =
     <span class="frac"><span class="top"><span class="var">n</span>(<span class="var">n</span>&minus;1)</span><span class="bot">2</span></span>
   </div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">total matches = players &times; (players &minus; 1) &divide; 2</div>
+    <div class="sub">each player faces everyone else once; divide by two so each match is not counted from both sides</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"The number of edges of K n equals one half the sum of all the vertex degrees, which comes out to n times n minus one, over two."</p>
-    <p><b>What it means</b>Players are vertices, matches are edges. Each of the n players has n minus one opponents, and dividing by two stops us counting every match from both ends.</p>
-    <p class="nums"><b>Real numbers</b>8 players: 28 matches. 30 players: 435 matches.</p>
+    <p><b>Meaning</b>Players are dots, matches are lines between them: everyone playing everyone is the complete graph.</p>
+    <p class="nums"><b>Real numbers</b>8 players: 8 &times; 7 &divide; 2 = 28 matches. 30 players: 30 &times; 29 &divide; 2 = 435.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">2 &middot; Counting the event</div>
   <h2>Real event duration</h2>
-  <div class="eq" style="font-size:min(3.6vw,38px)">racks &asymp; <span class="var">N</span> + <span class="frac"><span class="top"><span class="var">N</span>&minus;1</span><span class="bot">2</span></span>,
-  &nbsp; time = rounds &times; &lceil;<span class="frac"><span class="top">matches per round</span><span class="bot">tables</span></span>&rceil; &times; racks &times; minutes per rack</div>
+  <div class="eq">racks &asymp; <span class="var">N</span> + <span class="frac"><span class="top"><span class="var">N</span>&minus;1</span><span class="bot">2</span></span></div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">event time = rounds &times; waves &times; racks per match &times; minutes per rack</div>
+    <div class="sub">racks per match &asymp; race length + half of (race length &minus; 1) &nbsp;&middot;&nbsp; waves = matches per round &divide; tables, rounded up</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"Racks is about N plus half of N minus one. Time equals rounds, times matches per round over tables rounded up, times racks per match, times minutes per rack."</p>
-    <p><b>What it means</b>The winner plays exactly N racks and the loser averages about half of N minus one, so a race to five runs about seven racks. Rounds are sequential, and matches share the Student Union's six tables in waves.</p>
+    <p><b>Meaning</b>The winner plays exactly 5 racks, the loser averages about 2, so about 7 racks a match. Rounds run one after another; matches share the Union's six tables.</p>
     <p class="nums"><b>Real numbers</b>8 players: about 6.5 hours, one long evening. 30 players: over 80 hours. Small fields fit a night; big fields are simulation territory.</p>
   </div>
 </section>
@@ -138,20 +153,26 @@
   <div class="kicker">3 &middot; Scheduling</div>
   <h2>A schedule is a one-factorization</h2>
   <div class="eq"><span class="var">E</span>(<span class="var">K<sub>n</sub></span>) = <span class="var">M</span><sub>1</sub> &cup; <span class="var">M</span><sub>2</sub> &cup; &hellip; &cup; <span class="var">M</span><sub><span class="var">n</span>&minus;1</sub></div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">all the matchups = round 1's pairs + round 2's pairs + &hellip; + the last round's pairs</div>
+    <div class="sub">every matchup appears in exactly one round, and nobody plays twice in the same round</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"The edge set of K n splits into M one through M n minus one: disjoint perfect matchings, one per round."</p>
-    <p><b>What it means</b>A round is played simultaneously, so nobody appears twice: that is a perfect matching. A full schedule uses every edge exactly once, so it chops the whole graph into perfect matchings. Scheduling a round robin IS one-factorizing the complete graph.</p>
-    <p class="nums"><b>Real numbers</b>K<sub>6</sub>: 15 edges, 5 rounds of 3 matches, 5 &times; 3 = 15.</p>
+    <p><b>Meaning</b>Splitting all the matches into clean rounds like this is called a one-factorization. Scheduling a round robin IS this splitting problem.</p>
+    <p class="nums"><b>Real numbers</b>6 players: 15 matchups = 5 rounds &times; 3 matches.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">3 &middot; Scheduling &middot; the one to own</div>
-  <h2>The circle method works because 2 is invertible</h2>
+  <h2>The circle method, and why it works</h2>
   <div class="eq"><span class="var">i</span> + <span class="var">j</span> &equiv; &minus;2<span class="var">r</span> &nbsp;(mod <span class="var">n</span>&minus;1)</div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">seat i + seat j = &minus;2 &times; round number (working mod players &minus; 1)</div>
+    <div class="sub">two players meet in the one round whose number matches their seat sum</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"i plus j is congruent to minus two r, mod n minus one."</p>
-    <p><b>What it means</b>Pair across the ring, rotate one seat per round. Opposite seats share a position sum, and each rotation shifts it by minus two. Since n is even, n minus one is odd, so two is invertible, and the rounds sweep every residue class exactly once. Each pair has one fixed sum, so each pair meets exactly once.</p>
+    <p><b>Meaning</b>One player sits fixed, the rest rotate around a ring, pairing across. Each pair of seats has one fixed sum, and the rounds sweep every possible sum exactly once, because 2 divides cleanly mod an odd number. One sum each, every sum hit once: every pair meets exactly once.</p>
   </div>
   <table>
     <tr><th>round r</th><th>&minus;2r mod 5</th><th>ring pairs</th><th>fixed plays</th></tr>
@@ -165,47 +186,57 @@
 
 <section class="slide">
   <div class="kicker">3 &middot; Scheduling</div>
-  <h2>Chromatic index: why byes exist</h2>
-  <div class="eq">&chi;&prime;(<span class="var">K<sub>n</sub></span>) =
-    <span class="var">n</span>&minus;1 &nbsp;(<span class="var">n</span> even), &nbsp;&nbsp;
-    <span class="var">n</span> &nbsp;(<span class="var">n</span> odd)</div>
+  <h2>Why odd fields need byes</h2>
+  <div class="eq">&chi;&prime;(<span class="var">K<sub>n</sub></span>) = <span class="var">n</span>&minus;1 &nbsp;(<span class="var">n</span> even), &nbsp;&nbsp; <span class="var">n</span> &nbsp;(<span class="var">n</span> odd)</div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">rounds needed = players &minus; 1 if even, players if odd</div>
+    <div class="sub">with an odd count, every round must leave exactly one player resting</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"The chromatic index of K n is n minus one when n is even, and n when n is odd."</p>
-    <p><b>What it means</b>A schedule is an edge coloring, one color per round. Even fields color perfectly. Odd fields need one extra round, and every round leaves exactly one player uncolored: that is the graph theory reason byes exist. The app adds a phantom seat, so everyone rests exactly once.</p>
+    <p><b>Meaning</b>That is the graph theory reason byes exist, it is forced, not a design choice. The app adds a phantom seat so each player rests exactly once.</p>
     <p class="nums"><b>Real numbers</b>13 players: 13 rounds, one rotating bye per round.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">4 &middot; The knockout</div>
-  <h2>Seeding by the doubling recurrence</h2>
-  <div class="eq" style="font-size:min(4vw,42px)"><span class="var">S</span>(1) = [1], &nbsp; <span class="var">S</span>(2<span class="var">k</span>) = [<span class="var">s</span>, &nbsp;2<span class="var">k</span>+1&minus;<span class="var">s</span>] for each <span class="var">s</span> &isin; <span class="var">S</span>(<span class="var">k</span>)</div>
+  <h2>Seeding the bracket</h2>
+  <div class="eq"><span class="var">S</span>(1) = [1], &nbsp; <span class="var">S</span>(2<span class="var">k</span>) = [<span class="var">s</span>, &nbsp;2<span class="var">k</span>+1&minus;<span class="var">s</span>] for each <span class="var">s</span> &isin; <span class="var">S</span>(<span class="var">k</span>)</div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">pair every seed with its mirror: seed s plays seed (bracket size + 1 &minus; s)</div>
+    <div class="sub">so every first round pair adds to the same number: best vs worst, second best vs second worst</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"S of one is just seed one. To double the bracket, each seed s gets paired with its mirror, two k plus one minus s."</p>
-    <p><b>What it means</b>S(8) comes out 1, 8, 4, 5, 2, 7, 3, 6: every first round pair sums to nine, strongest against weakest. The top seeds land in different subtrees, and two players can only meet at the root of the smallest subtree containing both. That is why seeds one and two can only meet in the final.</p>
+    <p><b>Meaning</b>The top seeds land in different branches of the tree, and two players can only meet where their branches join. That is why seeds 1 and 2 can only ever meet in the final.</p>
+    <p class="nums"><b>Real numbers</b>8 seeds come out 1, 8, 4, 5, 2, 7, 3, 6: every opening pair sums to 9.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">4 &middot; The knockout</div>
-  <h2>Match counts, by counting losses</h2>
+  <h2>How many matches? Count losses</h2>
   <div class="eq">single: <span class="var">k</span>&minus;1, &nbsp;&nbsp; double: 2(<span class="var">k</span>&minus;1) + {0, 1}</div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">single elim: matches = players &minus; 1 &nbsp;&nbsp;&middot;&nbsp;&nbsp; double elim: matches = 2 &times; (players &minus; 1), plus 1 if the grand final resets</div>
+    <div class="sub">every match creates exactly one loss, and in double elim every non champion exits with exactly two</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"Single elimination is k minus one matches. Double elimination is two times k minus one, plus zero or one: so two k minus two, or two k minus one when the grand final resets."</p>
-    <p><b>What it means</b>Count losses, not matches: every match creates exactly one loss. Single elimination must eliminate k minus one players once. In double elimination every non champion exits with exactly two losses, and the reset game appears when the losers champion wins the first grand final.</p>
-    <p class="nums"><b>Real numbers</b>k = 8: single is 7 matches, double is 14, or 15 with a reset.</p>
+    <p><b>Meaning</b>Count losses instead of matches and both formats fall out in one line. The reset happens when the losers champion wins the first grand final game.</p>
+    <p class="nums"><b>Real numbers</b>8 seeds: single is 7 matches, double is 14, or 15 with a reset.</p>
   </div>
 </section>
 
 <section class="slide">
   <div class="kicker">5 &middot; An honest limitation</div>
   <h2>Carry-over imbalance</h2>
-  <div class="eq">&Gamma; = <span class="sum"><span class="sig">&Sigma;</span><span class="lim"><span class="var">j</span>,<span class="var">k</span></span></span> <span class="var">G</span>[<span class="var">j</span>][<span class="var">k</span>]<sup>2</sup>,
-  &nbsp;&nbsp; minimum = <span class="var">n</span>(<span class="var">n</span>&minus;1)</div>
+  <div class="eq">&Gamma; = <span class="sum"><span class="sig">&Sigma;</span><span class="lim"><span class="var">j</span>,<span class="var">k</span></span></span> <span class="var">G</span>[<span class="var">j</span>][<span class="var">k</span>]<sup>2</sup></div>
+  <div class="eqen"><span class="tag">In English</span>
+    <div class="words">imbalance = add up ( every handoff count ) squared &nbsp;&middot;&nbsp; fairest possible = players &times; (players &minus; 1)</div>
+    <div class="sub">a handoff: you play someone right after they faced a bruising opponent, inheriting their fatigue</div>
+  </div>
   <div class="say">
-    <p class="aloud"><b>Read it aloud</b>"Gamma equals the sum, over all pairs j and k, of G at j k squared. The balanced minimum is n times n minus one."</p>
-    <p><b>What it means</b>G counts opponent handoffs between consecutive rounds: playing someone right after they faced a bruising opponent is a carry-over. The sum of squares measures how unevenly those pile up. A 2018 theorem proves the circle method is the worst possible schedule by this measure. I show that on purpose: the method with the one line proof costs carry-over balance, and stating the tradeoff is part of the design.</p>
-    <p class="nums"><b>Real numbers</b>K<sub>6</sub>: circle method &Gamma; = 60, balanced minimum 30, exactly twice as bad. Balanced schedules exist when n is a power of two (Russell 1980).</p>
+    <p><b>Meaning</b>A 2018 theorem proves my schedule is the worst possible by this measure. I show it on purpose: the method with the one line proof costs carry-over balance, and stating the tradeoff honestly is part of the design.</p>
+    <p class="nums"><b>Real numbers</b>6 players: my schedule scores 60, the fairest possible is 30, exactly twice as bad. Balanced schedules exist when the player count is a power of two.</p>
   </div>
 </section>
 
@@ -215,7 +246,7 @@
   <div class="say" style="margin-top:3vh">
     <p style="font-size:26px"><b>Verification</b>108,181 test assertions run against the exact shipped code, plus five structural checks recomputed live from every generated schedule.</p>
     <p style="font-size:26px"><b>The goal is still real</b>Run this on the six tables at the Student Union.</p>
-    <p style="font-size:26px; margin-top:3vh; color:var(--brass)"><b></b>Questions.</p>
+    <p style="font-size:26px; margin-top:3vh; color:var(--brass)">Questions.</p>
   </div>
 </section>
 
