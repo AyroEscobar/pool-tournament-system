@@ -15,6 +15,7 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; }
   .script { font-size:17px; line-height:1.7; }
   .script p + p { margin-top:12px; }
+  .slot { background:#fdf3d7; border:1px dashed var(--brass); border-radius:4px; padding:0 6px; font-weight:bold; }
   table { border-collapse:collapse; width:100%; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   th, td { text-align:left; padding:9px 12px; border-top:1px solid var(--line); vertical-align:top; font-size:14.5px; }
   th { background:#f3eee2; border-top:0; font-family:-apple-system, Helvetica, sans-serif; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink2); }
@@ -35,61 +36,79 @@
 
 <h1>Pool Tournament System: 10 Minute Talk</h1>
 <p class="sub">CS 4302 Mathematics of Computing. Thursday August 6, around 3 PM, online with live demo.
-Drive the walkthrough with the left and right arrow keys so your hands never leave the keyboard.</p>
+One thing to fill in: your professor's name goes in the <span class="slot">yellow slot</span> below.
+The walkthrough advances with the left and right arrow keys.</p>
 
-<h2>1. Your opening, about 90 seconds (this is the whole frame)</h2>
+<h2>1. Your opening, about 2 minutes (word for word, in your voice)</h2>
 <div class="card script">
-<p>This started as a real thing, not a class demo. My goal was to run an actual seeded pool
-tournament with my friends at the Student Union, so I built a system that takes a roster,
-schedules everyone fairly, and runs the whole bracket. I got it in front of three or four
-friends and it worked, but between everybody's internships this summer we could never get the
-full field free on the same night.</p>
-<p>So today I simulate the tournaments instead, and honestly that shows the mathematics better,
-because I can run a thirty player field in seconds and rerun it live in front of you.</p>
-<p>One note on tools: I used AI to help typeset and polish the report. The system, the code,
-and the math I am about to walk through are mine, and I can defend every piece of it. Let me
-show you.</p>
+<p>Hello, my name is Ayro Escobar. I am studying computer science here at UTD, and I am
+really glad I took Mathematics of Computing, I have learned a lot in it. I know I have been
+mostly asynchronous this summer: I was finishing my internship, and I am proud to say I
+earned the return offer from JPMorgan. In my free time, while keeping up with the
+coursework, I worked with Professor <span class="slot">[PROFESSOR NAME]</span> on this
+project idea.</p>
+<p>This one is personal to me, because I love playing pool. Anyone at UTD knows the Student
+Union tables. There are only six of them, but they are the best, and I always wanted to run
+a real tournament there. I will be upfront: I tried to set one up with my friends this
+summer, and I would have loved to show you a real tournament running today, but with
+everyone off doing internships we could never get the whole field free on the same night.
+So instead I simulate the tournaments live, which turns out to show the mathematics even
+better, because I can run and rerun full fields in front of you.</p>
+<p>One note on tools: parts of this were built leveraging AI, as you can probably tell, and
+it helped typeset the report too. But I worked the math myself, I read the papers behind
+these algorithms, they are referenced in my documentation, and I can defend every piece of
+what you are about to see.</p>
+<p>The core idea: Elo is the rating system from chess, and it is also how games like Rocket
+League rank players. My goal was a format where it does not matter if you are a beginner or
+a professional, you get matched near your skill level so you can actually improve and grow.
+It would never be fair for the best player in the room, a pro like Efren Reyes, to play
+someone who just bought their first cue. So the system rates everyone, builds a provably
+fair schedule, and seeds the knockout by skill. Let me show you.</p>
 </div>
 
-<h2>2. Run of show, minute by minute</h2>
+<h2>2. Run of show, minute by minute (your flow: demo first, then the math)</h2>
 <table>
 <tr><th style="width:110px">Time</th><th>What you do</th><th>What you say</th></tr>
-<tr><td class="t">0:00 to 1:30</td><td>App already open on the default field. Deliver the opening above. Point at the verification panel.</td><td class="say">Five structural checks recomputed from the generated schedule, five of five pass. Correctness is shown from the output, not asserted.</td></tr>
-<tr><td class="t">1:30 to 4:30</td><td>Guided Walkthrough, Act 1, arrow keys. K6 diagram, one round inks as a perfect matching, the rotation, then the congruence table.</td><td class="say">A round robin is the complete graph K6. A round is a perfect matching. A full schedule is a one-factorization. The circle method works because 2 is invertible mod 5, watch the residue classes: 0, 3, 1, 4, 2, every class exactly once.</td></tr>
-<tr><td class="t">4:30 to 6:00</td><td>Act 2 briefly (Elo and the race model), then Act 3 (the seeded tree).</td><td class="say">Match odds follow Elo exactly because I invert the race formula instead of reusing the Elo number. The bracket is a binary tree with doubling seeds, so seeds 1 and 2 can only meet in the final.</td></tr>
-<tr><td class="t">6:00 to 7:30</td><td>Click <b>Double elim</b>, click the <b>13</b> example, click <b>Generate Schedule</b>, set speed <b>Fast</b>, click <b>Start Tournament</b>. Narrate while it plays.</td><td class="say">Everyone gets a second life. Nobody leaves with fewer than two games. Loss counting pins the size: k minus 1 non champions times two losses is 2k minus 2 matches, one more if the grand final resets.</td></tr>
-<tr><td class="t">7:30 to 8:45</td><td>Carry-over coda in the walkthrough: the heatmap.</td><td class="say">My own schedule is provably the worst one for carry-over balance, a 2018 theorem. I show that on purpose: knowing your method's weakness is part of the design.</td></tr>
-<tr><td class="t">8:45 to 10:00</td><td>Wrap on the verification panel.</td><td class="say">108,000 assertions run against the exact shipped code, plus live checks on every run. The real goal is still to run this at the Student Union. Questions.</td></tr>
+<tr><td class="t">0:00 to 2:00</td><td>App open on the default 8 player field. Deliver the opening above.</td><td class="say">The script in section 1.</td></tr>
+<tr><td class="t">2:00 to 3:30</td><td>Click <b>Generate Schedule</b>, set speed <b>Slow</b>, click <b>Start Tournament</b>. Point at the standings and the <b>Live Elo update</b> card as matches finish. Use <b>Pause</b> freely.</td><td class="say">Watch the equation with the real numbers. The favorite usually wins, but never automatically, that would be unfair. And when the underdog wins, K times S minus E pays them more points, because the expectation was low. The two changes are always equal and opposite, points are conserved.</td></tr>
+<tr><td class="t">3:30 to 4:30</td><td>Point at the <b>Schedule Verification</b> panel, then the duration line under Group Stage.</td><td class="say">Five checks recomputed from the generated schedule, like invariants in software engineering: every pair meets exactly once, no duplicates, nobody plays twice in a round, the round count matches theory, seven for eight players, and total matches equal n times n minus 1 over 2. And here is the real world math: on the Union's six tables at about 8 minutes a rack, this 8 player group stage is around six and a half hours. Thirty players would be over eighty hours, which is exactly why big fields live in simulation.</td></tr>
+<tr><td class="t">4:30 to 6:30</td><td>Guided Walkthrough, Act 1, arrow keys: K6, a round as a perfect matching, the rotation, the congruence table.</td><td class="say">A round robin is the complete graph. A round is a perfect matching. A full schedule is a one-factorization. The circle method works because 2 is invertible mod 5: the residue classes come out 0, 3, 1, 4, 2, every class exactly once, so every pair meets exactly once.</td></tr>
+<tr><td class="t">6:30 to 8:00</td><td>Click <b>Double elim</b>, click the <b>13</b> example, <b>Generate Schedule</b>, speed <b>Fast</b>, <b>Start Tournament</b>. Narrate while it plays. Switch to <b>Instant</b> if time is tight.</td><td class="say">Everyone gets a second life, nobody plays fewer than two games. Loss counting pins the size: k minus 1 non champions with two losses each is 2k minus 2 matches, one more if the grand final resets.</td></tr>
+<tr><td class="t">8:00 to 9:00</td><td>Carry-over heatmap in the walkthrough coda.</td><td class="say">My own schedule is provably the worst for carry-over balance, a 2018 theorem. I show that on purpose: knowing your method's weakness is part of the design.</td></tr>
+<tr><td class="t">9:00 to 10:00</td><td>Wrap on the verification panel.</td><td class="say">108,000 test assertions run against the exact shipped code, plus live checks on every run. And the goal is still real: run this on the six tables at the Union. Questions.</td></tr>
 </table>
 
-<h2>3. Demo click path (exact buttons)</h2>
+<h2>3. Demo click path (exact buttons, in order)</h2>
 <div class="card">
 <ol>
-<li>Open <code>index.html</code> full screen before the call. Default roster loads itself.</li>
-<li>Walkthrough advances with <b>left and right arrow keys</b> (buttons: Back, Next, Auto-play, Restart).</li>
-<li>Format toggle: <b>Single elim</b> / <b>Double elim</b>. Examples row: <b>8</b>, <b>13</b>, <b>30</b>.</li>
-<li>For the live run: <b>Double elim</b>, then <b>13</b>, then <b>Generate Schedule</b>, speed <b>Fast</b>, then <b>Start Tournament</b>.</li>
-<li>If time runs short, switch speed to <b>Instant</b> and jump to the final bracket.</li>
+<li>Open <code>index.html</code> full screen before the call. Default 8 player roster loads itself.</li>
+<li>First run: <b>Generate Schedule</b>, speed <b>Slow</b>, <b>Start Tournament</b>. Talk over the Live Elo card. <b>Pause</b> and resume freely.</li>
+<li>Walkthrough: <b>left and right arrow keys</b> (buttons: Back, Next, Auto-play, Restart).</li>
+<li>Second run: <b>Double elim</b>, then <b>13</b>, then <b>Generate Schedule</b>, speed <b>Fast</b>, <b>Start Tournament</b>.</li>
+<li>Examples row is <b>8</b>, <b>13</b>, <b>30</b>. If time runs short anywhere, switch speed to <b>Instant</b>.</li>
 </ol>
 </div>
 
-<h2>4. Know your code (all of it is one file, index.html, 3194 lines)</h2>
+<h2>4. Know your code (one file, index.html, 3254 lines)</h2>
 <table>
 <tr><th>Where</th><th>What it is</th><th>If asked, say</th></tr>
-<tr><td class="mono">834 to 1382</td><td>Section 1: pure algorithms, no DOM. The test runner extracts exactly this block.</td><td>The tested code is the shipped code, they cannot drift.</td></tr>
-<tr><td class="mono">buildSchedule, 886</td><td>The circle method. Fixed player plus a rotating ring.</td><td>Returns rounds of pairs; the congruence proof says every pair appears exactly once.</td></tr>
-<tr><td class="mono">verifySchedule, 929</td><td>Recomputes the five structural properties from the schedule.</td><td>This is the in app proof: coverage, no double booking, round count, match counts.</td></tr>
-<tr><td class="mono">eloExpected, 1026</td><td>The Elo expectation formula.</td><td>Updates are equal and opposite, so rating points are conserved.</td></tr>
-<tr><td class="mono">raceWinProbability, 1057</td><td>Negative binomial tail: chance of winning a race to N when each rack is q.</td><td>Strictly increasing in q, which is what makes the bisection work.</td></tr>
-<tr><td class="mono">simulateMatch, 1081</td><td>Inverts the race formula by bisection so match odds equal the Elo odds, then plays rack by rack.</td><td>1650 vs 1500: E is 0.703, the solved rack probability is 0.586.</td></tr>
-<tr><td class="mono">seedOrder, 1111</td><td>The doubling recurrence. S(8) is 1, 8, 4, 5, 2, 7, 3, 6.</td><td>Every first round pair sums to k plus 1.</td></tr>
-<tr><td class="mono">buildBracket, 1135</td><td>Single elimination tree from the seed order.</td><td>k minus 1 matches, one loss eliminates.</td></tr>
-<tr><td class="mono">buildDoubleBracket, 1191</td><td>Winners plus losers bracket plus grand final with reset, every match carrying winTo and loseTo pointers.</td><td>One linear match queue drives both formats, no special casing.</td></tr>
-<tr><td class="mono">seedMeetRound, 1326</td><td>Earliest round two seeds can meet: height of their lowest common ancestor.</td><td>Seeds 1 and 2: the final. Top four: no earlier than semifinals.</td></tr>
-<tr><td class="mono">carryOverMatrix, 1351</td><td>The handoff matrix G and its sum of squares.</td><td>Circle method hits the provable maximum; balanced minimum is n(n minus 1).</td></tr>
-<tr><td class="mono">1385 to 1517</td><td>Sections 2 and 3: roster parsing and app state.</td><td>Validation plus plain in memory variables, no storage.</td></tr>
-<tr><td class="mono">1518 to 2795</td><td>Section 4: all rendering. 4b at 2304 is the Guided Walkthrough engine, 18 steps, 4 acts.</td><td>The walkthrough runs on a fixed teaching field so it presents identically every time.</td></tr>
-<tr><td class="mono">2796 to 3193</td><td>Sections 5 and 6: the timed simulation queue, speeds, pause; then event wiring.</td><td>The simulator is one linear queue of matches in a valid play order.</td></tr>
+<tr><td class="mono">838 to 1402</td><td>Section 1: pure algorithms, no DOM. The test runner extracts exactly this block.</td><td>The tested code is the shipped code, they cannot drift.</td></tr>
+<tr><td class="mono">buildSchedule, 890</td><td>The circle method. Fixed player plus a rotating ring.</td><td>Returns rounds of pairs; the congruence proof says every pair appears exactly once.</td></tr>
+<tr><td class="mono">verifySchedule, 933</td><td>Recomputes the five structural properties from the schedule.</td><td>The in app proof: coverage, no double booking, round count, match counts.</td></tr>
+<tr><td class="mono">eloExpected, 1030</td><td>The Elo expectation formula.</td><td>Updates are equal and opposite, so rating points are conserved.</td></tr>
+<tr><td class="mono">raceWinProbability, 1061</td><td>Negative binomial tail: chance of winning a race to N when each rack is q.</td><td>Strictly increasing in q, which is what makes the bisection work.</td></tr>
+<tr><td class="mono">simulateMatch, 1085</td><td>Inverts the race formula by bisection so match odds equal the Elo odds, then plays rack by rack.</td><td>1650 vs 1500: E is 0.703, the solved rack probability is 0.586.</td></tr>
+<tr><td class="mono">seedOrder, 1115</td><td>The doubling recurrence. S(8) is 1, 8, 4, 5, 2, 7, 3, 6.</td><td>Every first round pair sums to k plus 1.</td></tr>
+<tr><td class="mono">buildBracket, 1139</td><td>Single elimination tree from the seed order.</td><td>k minus 1 matches, one loss eliminates.</td></tr>
+<tr><td class="mono">buildDoubleBracket, 1195</td><td>Winners plus losers bracket plus grand final with reset, every match carrying winTo and loseTo pointers.</td><td>One linear match queue drives both formats, no special casing.</td></tr>
+<tr><td class="mono">seedMeetRound, 1330</td><td>Earliest round two seeds can meet: height of their lowest common ancestor.</td><td>Seeds 1 and 2: the final. Top four: no earlier than semifinals.</td></tr>
+<tr><td class="mono">carryOverMatrix, 1355</td><td>The handoff matrix G and its sum of squares.</td><td>Circle method hits the provable maximum; balanced minimum is n(n minus 1).</td></tr>
+<tr><td class="mono">expectedRacks, 1389</td><td>A race to N averages about N plus half of N minus 1 racks.</td><td>Winner plays exactly N; the loser averages about half of N minus 1 across a mixed field.</td></tr>
+<tr><td class="mono">estimateEventMinutes, 1396</td><td>Real event length: sequential rounds, matches share the six tables in waves.</td><td>8 players: 7 rounds times 7 racks times 8 minutes is about 6.5 hours.</td></tr>
+<tr><td class="mono">1405 to 1537</td><td>Sections 2 and 3: roster parsing and app state.</td><td>Validation plus plain in memory variables, no storage.</td></tr>
+<tr><td class="mono">renderEloLive, 1620</td><td>The Live Elo update card: prints the finished match's expectation and K(S minus E) transfer with the real ratings.</td><td>The math panel shows the formula; this shows it happening.</td></tr>
+<tr><td class="mono">1538 to 2849</td><td>Section 4: all rendering. 4b at 2358 is the Guided Walkthrough engine, 18 steps, 4 acts.</td><td>The walkthrough runs on a fixed teaching field so it presents identically every time.</td></tr>
+<tr><td class="mono">2850 to 3254</td><td>Sections 5 and 6: the timed simulation queue, speeds, pause; then event wiring.</td><td>The simulator is one linear queue of matches in a valid play order.</td></tr>
 </table>
 
 <h2>5. The math in your own words (say each unaided)</h2>
@@ -106,6 +125,10 @@ and everyone rests exactly once.</p>
 update K times S minus E with K equal 32 is zero sum. Matches race to 5 racks, and a long race
 amplifies a small edge, so using E as the rack probability would over reward favorites. I invert
 the negative binomial by bisection to find the rack probability whose match odds equal E.</p>
+<p><b>Why the underdog can always win.</b> The simulation plays rack by rack with a probability,
+never a coin flip decided by rating order. When the underdog does win, S minus E is large, so
+they gain more points than a favorite would for the same win. That is the matchmaking goal:
+beginners and pros both get fair, informative games.</p>
 <p><b>Seeding.</b> The doubling recurrence puts seed s with seed 2k plus 1 minus s. The top
 2 to the t seeds land in 2 to the t different subtrees (subtree isolation lemma), and two
 players meet at the root of the smallest subtree containing both, so 1 and 2 meet only in
@@ -118,11 +141,15 @@ opposite side of the draw to delay rematches.</p>
 of squares. Balanced schedules reach n times n minus 1; the circle method provably reaches the
 maximum (Lambrechts, Ficker, Goossens, Spieksma 2018), and balanced ones exist when n is a power
 of two (Russell 1980). I state the weakness and draw the matrix live.</p>
+<p><b>Event duration.</b> Winner plays exactly N racks, loser averages half of N minus 1, so a
+race to 5 is about 7 racks, roughly 56 minutes at 8 minutes a rack. Rounds run one after
+another and matches share the six tables in waves, so 8 players is about 6.5 hours and 30
+players is over 80 hours. Small fields fit an evening; big fields are simulation territory.</p>
 </div>
 
 <h2>6. Numbers to have cold</h2>
 <div>
-<span class="num"><b>108,170</b> test assertions</span>
+<span class="num"><b>108,181</b> test assertions</span>
 <span class="num"><b>n(n-1)/2</b> matches, <b>28</b> for 8 players</span>
 <span class="num">K6 has <b>15</b> edges, <b>5</b> rounds</span>
 <span class="num">residues hit: <b>0, 3, 1, 4, 2</b></span>
@@ -132,6 +159,8 @@ of two (Russell 1980). I state the weakness and draw the matrix live.</p>
 <span class="num">single elim <b>k-1</b>, double <b>2k-2</b> or <b>2k-1</b></span>
 <span class="num">k=8 double elim: <b>14 or 15</b> matches</span>
 <span class="num">carry-over K6: <b>60</b> vs balanced <b>30</b></span>
+<span class="num">race to 5 is about <b>7</b> racks</span>
+<span class="num">8 players about <b>6.5 hours</b>, 30 players over <b>80 hours</b>, on <b>6</b> tables</span>
 </div>
 
 <h2>7. Question drill (most likely oral questions)</h2>
@@ -143,6 +172,9 @@ odd, which guarantees it.</dd>
 <dt>Why not use the Elo expectation directly as the rack probability?</dt>
 <dd>A race to 5 amplifies a per rack edge. The 70 percent favorite would win the match more than
 85 percent of the time. Inverting the formula keeps match odds exactly at 70.</dd>
+<dt>Why does the underdog gain more points for a win?</dt>
+<dd>The update is K times S minus E. When the expectation E was small, S minus E is close to 1,
+so the payout is close to the full K of 32. Favorites winning expected matches gain little.</dd>
 <dt>Why can seeds 1 and 2 only meet in the final?</dt>
 <dd>Subtree isolation: every subtree with 2 to the j leaves holds exactly one top seed of the
 matching tier, and two players meet at their subtrees' lowest common ancestor, which for seeds
@@ -157,12 +189,18 @@ the losers final is forced, so a rematch is already possible there.</dd>
 <dd>It is the simplest construction with a short complete proof, which is the point in a math
 course. Balanced schedules exist for powers of two but lose the one line argument. I state the
 tradeoff and draw the matrix live rather than hide it.</dd>
+<dt>Where do the duration numbers come from?</dt>
+<dd>The winner of a race to 5 plays exactly 5 racks and the loser averages about 2, so 7 racks,
+about 56 minutes at 8 a rack. 7 rounds of 4 matches fit the six tables in one wave each, so
+7 times 56 is about six and a half hours. At 30 players each round needs 3 waves for 15
+matches, and 29 rounds times 3 times 56 minutes passes 80 hours.</dd>
 <dt>Is your schedule the only valid one?</dt>
 <dd>No. K8 alone has 6240 one-factorizations. The circle method is one systematic route with a
 provable construction.</dd>
 <dt>What exactly did AI do?</dt>
-<dd>It helped typeset and polish the report. The design, the code, the proofs I present, and
-every decision in the system are mine, which is why I can walk any function in the file.</dd>
+<dd>It helped build parts of the app and typeset the report. The math is mine: I read the papers
+behind these algorithms, they are cited in the report, and I can walk any function in the file
+and prove the core results at the board.</dd>
 </dl></div>
 
 <h2>8. Backup plan</h2>
@@ -170,8 +208,8 @@ every decision in the system are mine, which is why I can walk any function in t
 <p>If screen sharing the live app fails, present from <code>docs/report.pdf</code>: its figures
 cover every screen (the K6 diagram, the congruence table, the seeded tree, the completed double
 elimination with a reset, the carry-over heatmap). Keep the PDF open in a second window the
-whole time. Rehearse once tonight with a timer: the walkthrough plus the fast double elimination
-run fits 10 minutes with about a minute of slack.</p>
+whole time. Rehearse once tonight with a timer: the slow first run plus the walkthrough plus
+the fast double elimination fits 10 minutes with about a minute of slack.</p>
 </div>
 
 </div>
