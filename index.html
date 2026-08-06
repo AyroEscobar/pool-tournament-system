@@ -656,6 +656,10 @@ footer {
             <tbody id="standings-body"></tbody>
           </table>
         </div>
+        <div class="card" id="elo-live" hidden>
+          <h3 class="card-title">Live Elo update</h3>
+          <p class="section-note" id="elo-live-body"></p>
+        </div>
       </section>
 
       <section id="group-section" hidden>
@@ -1379,6 +1383,22 @@ function carryOverValue(schedule) {
   return v;
 }
 
+/* Expected racks in a race to N: the winner plays exactly N, and
+   across a mixed field the loser averages about (N-1)/2 (favorites
+   hold underdogs low, even matches run high). So about 1.5 N. */
+function expectedRacks(raceTo) {
+  return raceTo + (raceTo - 1) / 2;
+}
+
+/* Real event length in minutes. Rounds are sequential; inside a
+   round the matches share the tables, so a round takes
+   ceil(matchesPerRound / tables) waves of one match length. */
+function estimateEventMinutes(rounds, matchesPerRound, tables, raceTo, minutesPerRack) {
+  const waves = Math.ceil(matchesPerRound / tables);
+  const matchMinutes = expectedRacks(raceTo) * minutesPerRack;
+  return rounds * waves * matchMinutes;
+}
+
 // [ALGO:END]
 
 /* ----------------------------------------------------------------
@@ -1592,6 +1612,32 @@ function renderStandings(result) {
       });
     }
   }
+}
+
+/* Shows the Elo arithmetic of the match that just finished, with the
+   real numbers plugged into the formulas, so the update is visible
+   next to the standings as they move. */
+function renderEloLive(pa, pb, beforeA, beforeB, res, deltaA, race) {
+  const winner = res.aWins ? pa : pb;
+  const loser = res.aWins ? pb : pa;
+  const wBefore = res.aWins ? beforeA : beforeB;
+  const lBefore = res.aWins ? beforeB : beforeA;
+  const eWinner = res.aWins ? res.expectedA : 1 - res.expectedA;
+  const gain = Math.abs(deltaA);
+  const wRacks = Math.max(res.aRacks, res.bRacks);
+  const lRacks = Math.min(res.aRacks, res.bRacks);
+  el('elo-live').hidden = false;
+  el('elo-live-body').innerHTML =
+    '<strong>' + escapeHtml(winner.name) + '</strong> (' + Math.round(wBefore) + ') beats <strong>' +
+    escapeHtml(loser.name) + '</strong> (' + Math.round(lBefore) + '), ' + wRacks + '-' + lRacks +
+    ' in a race to ' + race + '.<br>' +
+    'Expectation: E = 1 / (1 + 10<sup>(' + Math.round(lBefore) + ' &minus; ' + Math.round(wBefore) +
+    ') / 400</sup>) = ' + eWinner.toFixed(3) + '.<br>' +
+    'Update: &Delta;R = K (S &minus; E) = 32 &times; (1 &minus; ' + eWinner.toFixed(3) + ') = +' +
+    gain.toFixed(1) + '.<br>' +
+    'New ratings: ' + escapeHtml(winner.name) + ' ' + Math.round(winner.elo) + ', ' +
+    escapeHtml(loser.name) + ' ' + Math.round(loser.elo) +
+    '. The two changes are equal and opposite, so rating points are conserved.';
 }
 
 /* Repaints a resolved group match row in place: score, winner in
@@ -2265,6 +2311,14 @@ function renderGroupNote() {
     text = N + ' players: ' + s.rounds.length + ' rounds of ' + perRound +
       ' simultaneous matches, ' + total + ' matches in total. Every player faces every other player exactly once.';
   }
+  const mins = estimateEventMinutes(s.rounds.length, perRound, 6, 5, 8);
+  const hours = mins / 60;
+  const timeText = hours >= 48
+    ? Math.round(hours) + ' hours (' + Math.round(hours / 6) + ' six hour sessions)'
+    : (Math.round(hours * 10) / 10) + ' hours';
+  text += ' Played live on the Student Union’s six tables at about 8 minutes a rack' +
+    ' (a race to 5 averages about ' + expectedRacks(5) + ' racks), that is roughly ' +
+    timeText + ' of real play.';
   el('group-note').textContent = text;
 }
 
@@ -2934,10 +2988,14 @@ function processMatch(item) {
   const m = roundsFor(item.phase)[item.round][item.index];
   const pa = state.players[m.a];
   const pb = state.players[m.b];
-  const res = simulateMatch(pa.elo, pb.elo, raceToFor(item), Math.random);
+  const race = raceToFor(item);
+  const beforeA = pa.elo;
+  const beforeB = pb.elo;
+  const res = simulateMatch(pa.elo, pb.elo, race, Math.random);
   const deltaA = eloDelta(res.expectedA, res.aWins ? 1 : 0);
   pa.elo += deltaA;
   pb.elo -= deltaA;
+  renderEloLive(pa, pb, beforeA, beforeB, res, deltaA, race);
   const winner = res.aWins ? pa : pb;
   const loser = res.aWins ? pb : pa;
   m.result = { aRacks: res.aRacks, bRacks: res.bRacks, winnerId: winner.id };
@@ -3084,6 +3142,8 @@ function handleGenerate() {
   el('bracket-section').hidden = true;
   el('bracket-grid').innerHTML = '';
   el('champion-banner').hidden = true;
+  el('elo-live').hidden = true;
+  el('elo-live-body').innerHTML = '';
   el('math-section').hidden = false;
   el('walk-section').hidden = false;
   state.diagramRound = 0;

@@ -18,7 +18,8 @@ const algo = new Function(html.slice(begin, end) + `
            raceWinProbability, rackProbabilityFor, simulateMatch,
            seedOrder, qualifierCount, buildBracket, bracketRoundNames,
            seedMeetRound, carryOverMatrix, carryOverValue,
-           buildDoubleBracket, applyDoubleResult };
+           buildDoubleBracket, applyDoubleResult,
+           expectedRacks, estimateEventMinutes };
 `)();
 
 let checks = 0;
@@ -302,6 +303,26 @@ for (const k of [4, 8, 16]) {
   assert(wb2[0].loseTo.r === idxLBmajor && wb2[1].loseTo.r === idxLBmajor, 'k=8 WB2 losers drop into LB round 2');
   assert(wb2[0].loseTo.i !== wb2[1].loseTo.i, 'k=8 WB2 losers land in different LB matches');
   assert(wb2[0].loseTo.i === 1 && wb2[1].loseTo.i === 0, 'k=8 WB2 loser drop is reversed (crossed)');
+}
+
+/* Event duration model: winner plays exactly raceTo racks, the loser
+   averages (raceTo-1)/2, rounds are sequential, matches inside a
+   round share the tables in waves. */
+console.log('Event duration estimate');
+{
+  assertEqual(algo.expectedRacks(5), 7, 'race to 5 averages 7 racks');
+  assertEqual(algo.expectedRacks(7), 10, 'race to 7 averages 10 racks');
+  /* 8 players on 6 tables: 7 rounds, 4 matches per round fit in one
+     wave, 7 racks at 8 minutes: 7 * 1 * 56 = 392 minutes. */
+  assertEqual(algo.estimateEventMinutes(7, 4, 6, 5, 8), 392, '8 player group stage is 392 minutes on 6 tables');
+  /* 30 players: 29 rounds, 15 matches per round need 3 waves of 6
+     tables: 29 * 3 * 56 = 4872 minutes. */
+  assertEqual(algo.estimateEventMinutes(29, 15, 6, 5, 8), 4872, '30 player group stage is 4872 minutes on 6 tables');
+  /* Fewer tables can never shorten the event. */
+  for (let t = 1; t < 8; t++) {
+    assert(algo.estimateEventMinutes(7, 4, t, 5, 8) >= algo.estimateEventMinutes(7, 4, t + 1, 5, 8),
+      'duration is monotone in tables at t=' + t);
+  }
 }
 
 console.log('');
