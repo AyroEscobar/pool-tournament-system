@@ -569,10 +569,23 @@ footer {
   font: 400 11.5px/1.6 var(--mono);
   color: var(--ink-faint);
 }
-.plain-eq { background: rgba(148,105,12,0.07); border-left: 3px solid var(--gold); border-radius: 4px;
-  padding: 9px 12px; margin: 10px 0; font-family: var(--sans); font-size: 13.5px; line-height: 1.6; color: var(--ink); }
-.plain-eq .tag { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+.plain-eq { background: rgba(148,105,12,0.08); border: 1.5px solid var(--gold); border-radius: 10px;
+  padding: 12px 16px; margin: 12px 0; font-family: var(--sans); }
+.plain-eq .tag { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 6px; text-align: center; }
+.plain-eq .we { display: block; text-align: center; font-weight: 650; font-size: 15.5px;
+  line-height: 1.5; color: var(--ink); margin-bottom: 4px; }
+.plain-eq .sub { display: block; text-align: center; font-size: 12.5px; color: var(--ink-dim); margin-bottom: 8px; }
+.plain-eq .ex { display: block; font-size: 13px; line-height: 1.62; color: var(--ink-dim); }
+.tex { font-family: var(--serif); font-size: 19px; text-align: center; margin: 10px 0 12px;
+  line-height: 1.9; color: var(--ink); }
+.tex i { font-style: italic; }
+.tex .frac { display: inline-block; vertical-align: middle; text-align: center; line-height: 1.15; margin: 0 3px; }
+.tex .frac .top { display: block; border-bottom: 1.5px solid var(--ink); padding: 0 6px 2px; }
+.tex .frac .bot { display: block; padding-top: 2px; }
+.tex .sum { display: inline-block; vertical-align: middle; text-align: center; line-height: 1; margin: 0 4px; }
+.tex .sum .lim { display: block; font-size: 10px; }
+.tex .sum .sig { display: block; font-size: 26px; }
 </style>
 </head>
 <body>
@@ -663,7 +676,8 @@ footer {
         <div class="card" id="elo-live" hidden>
           <h3 class="card-title">Live Elo update</h3>
           <div class="plain-eq"><span class="tag">The rule</span>
-          new rating = old rating + 32 &times; (result &minus; expected chance). Upsets pay more; the winner's gain equals the loser's loss.</div>
+          <span class="we">new rating = old rating + 32 &times; (result &minus; expected chance)</span>
+          <span class="ex">The rating moves by how surprising the result was: an expected win barely moves it, an upset swings it hard. Both players always move by the same amount in opposite directions, so points are transferred, never created.</span></div>
           <p class="section-note" id="elo-live-body"></p>
         </div>
       </section>
@@ -735,11 +749,13 @@ footer {
         <div class="eqlabel">The object</div>
         <div class="formula" id="fact-union"></div>
         <div class="plain-eq"><span class="tag">In English</span>
-        total matches = players &times; (players &minus; 1) &divide; 2, and the schedule splits them into rounds where every matchup appears exactly once and nobody plays twice in the same round.</div>
+        <span class="we">total matches = players &times; (players &minus; 1) &divide; 2</span>
+        <span class="ex">Each of the n players must face the other n &minus; 1, and dividing by two stops every match being counted from both ends. The schedule then splits those matches into rounds where every matchup appears exactly once and nobody is double booked. That clean split is what mathematicians call a one-factorization, and building one is the entire scheduling problem.</span></div>
         <div class="eqlabel">Why every pair meets exactly once, in two steps</div>
         <div class="formula" id="proof-steps"></div>
         <div class="plain-eq"><span class="tag">In English</span>
-        seat i + seat j = &minus;2 &times; round number, working mod players &minus; 1. Each pair of seats has one fixed sum, and the rounds sweep every possible sum exactly once, so every pair meets exactly once.</div>
+        <span class="we">seat i + seat j = &minus;2 &times; round number &nbsp;(working mod players &minus; 1)</span>
+        <span class="ex">Every pair of seats has one fixed sum, and each rotation shifts the selected sum by two. Because the ring holds an odd count, stepping by two visits every possible sum before repeating, like walking a five hour clock two hours at a time: you land on every hour. One fixed sum per pair, every sum selected exactly once, so every pair meets in exactly one round.</span></div>
         <p class="fine">Number the ring vertices 1 to n-1 in entry order around the fixed vertex. Step (1) is
         read off the seating geometry: opposite seats have constant position sum, and each rotation shifts
         every position by one, so the sum class the round selects moves by -2. Step (2) is the arithmetic
@@ -752,11 +768,19 @@ footer {
       <div class="card math-card">
         <h3>Elo expectation and update</h3>
         <div class="eqlabel">Rating update</div>
-        <div class="formula">E_A = 1 / (1 + 10^((R_B - R_A) / 400))<br>R_new = R_old + K (S - E),&nbsp;&nbsp;K = 32,&nbsp;&nbsp;S = 1 win, 0 loss</div>
+        <div class="tex"><i>E<sub>A</sub></i> = <span class="frac"><span class="top">1</span><span class="bot">1 + 10<sup>(<i>R<sub>B</sub></i> &minus; <i>R<sub>A</sub></i>) / 400</sup></span></span>
+        &nbsp;&nbsp;&nbsp;&nbsp; <i>R&prime;</i> = <i>R</i> + <i>K</i>(<i>S</i> &minus; <i>E</i>), &nbsp;<i>K</i> = 32, &nbsp;<i>S</i> = 1 win, 0 loss</div>
         <div class="plain-eq"><span class="tag">In English</span>
-        chance A wins = 1 &divide; (1 + 10 ^ (rating gap &divide; 400)), where the gap is B's rating minus A's rating. Chance B wins = 1 &minus; chance A wins.<br>
-        new rating = old rating + 32 &times; (result &minus; expected chance), where result is 1 for a win and 0 for a loss. Upsets pay more; the winner's gain equals the loser's loss.</div>
+        <span class="we">chance A wins = 1 &divide; ( 1 + 10 ^ ( rating gap &divide; 400 ) )</span>
+        <span class="sub">rating gap = B's rating &minus; A's rating &nbsp;&middot;&nbsp; chance B wins = 1 &minus; chance A wins</span>
+        <span class="ex">Only the gap between the ratings matters, never the raw numbers. Every 400 points of gap multiplies the odds by ten; equal ratings give exactly fifty fifty. After the game, new rating = old rating + 32 &times; (result &minus; expected chance), where the result is 1 for a win and 0 for a loss: the rating moves by how surprising the outcome was, upsets pay more, and the winner's gain always equals the loser's loss. The Live Elo card above the standings prints this arithmetic with the real ratings after every match.</span></div>
         <div class="eqlabel">Race calibration</div>
+        <div class="tex"><i>P</i>(<i>N</i>, <i>q</i>) =
+        <span class="sum"><span class="lim"><i>N</i>&minus;1</span><span class="sig">&Sigma;</span><span class="lim"><i>k</i>=0</span></span>
+        C(<i>N</i>&minus;1+<i>k</i>, <i>k</i>) &nbsp;<i>q</i><sup><i>N</i></sup> (1&minus;<i>q</i>)<sup><i>k</i></sup></div>
+        <div class="plain-eq"><span class="tag">In English</span>
+        <span class="we">match chance = add up, for every score the loser could end with: (ways that score happens) &times; (chance of that rack sequence)</span>
+        <span class="ex">A match is a race, first to 5 racks. A long race amplifies a small edge, so plugging the Elo chance in directly would over reward favorites. The app solves this backwards: it finds the per rack probability whose match odds equal the Elo odds exactly, so favorites win at exactly the rated frequency while scorelines stay realistic. The line below shows that calibration computed live for two players from this roster.</span></div>
         <div class="formula" id="race-calibration"></div>
         <p id="elo-example"></p>
         <p class="fine">Every simulated match draws its winner from exactly these odds. The race score model then
@@ -793,7 +817,8 @@ footer {
         <div class="eqlabel">Placement recurrence</div>
         <div class="formula" id="seed-recurrence"></div>
         <div class="plain-eq"><span class="tag">In English</span>
-        pair every seed with its mirror: seed s plays seed (bracket size + 1 &minus; s), so the best opens against the weakest and seeds 1 and 2 can only meet in the final. Single elimination is players &minus; 1 matches; double elimination is 2 &times; (players &minus; 1), plus one more if the grand final resets.</div>
+        <span class="we">seed s plays seed ( bracket size + 1 &minus; s )</span>
+        <span class="ex">Every opening pair adds to the same number, so the best faces the weakest and the second best faces the second weakest. Repeating the mirror rule at every level pushes the top seeds into opposite branches of the tree, which is exactly why seeds 1 and 2 cannot meet before the final. Counting is one line: single elimination needs players &minus; 1 matches, double elimination 2 &times; (players &minus; 1), plus one more when the grand final resets.</span></div>
       </div>
 
       </div>
@@ -815,7 +840,9 @@ footer {
             <div class="eqlabel">Imbalance value, this schedule</div>
             <div class="formula" id="carry-value"></div>
             <div class="plain-eq"><span class="tag">In English</span>
-            imbalance = add up (every handoff count) squared. The fairest possible score is players &times; (players &minus; 1); this schedule is provably the worst by this measure, and it is shown on purpose.</div>
+            <span class="we">imbalance = add up ( every handoff count ) squared</span>
+            <span class="sub">fairest possible score = players &times; (players &minus; 1)</span>
+            <span class="ex">A handoff means you face someone right after they finished a bruising match, inheriting their fatigue. Squaring punishes pile ups, so a schedule that spreads handoffs evenly scores the minimum. A 2018 theorem proves this rotation scores the maximum possible, the worst. It is displayed on purpose: the price of the simple, provable construction is shown, not hidden.</span></div>
           </div>
           <div class="carry-viz">
             <div id="carry-heatmap"></div>
