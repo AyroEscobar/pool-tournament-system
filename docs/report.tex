@@ -65,6 +65,16 @@ become questions that discrete mathematics answers cleanly and provably:
   \item Rating and seeding players fairly is handled by the Elo system.
 \end{itemize}
 
+The project began as a real event. I built the system so a group of friends and I
+could run a proper seeded tournament on those tables, and I trialed it with three
+or four friends to exercise the roster entry and the opening rounds. A full live
+bracket did not survive the summer: between everyone's internships there was never
+a night with the whole field free. So the version presented here exercises the
+system by simulation instead. The app plays complete tournaments with rated odds,
+which turned out to be the better showcase for the mathematics anyway, since a
+simulated field can be rerun, resized, and pushed to thirty players on demand,
+while one evening of live pool demonstrates a single schedule once.
+
 The deliverable is a single self contained web page (no build step, no external
 libraries, no stored data) that reads a roster of $4$ to $30$ players, generates
 the schedule, plays every match with rated odds, and crowns a champion, while a
