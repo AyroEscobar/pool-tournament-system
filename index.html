@@ -569,6 +569,10 @@ footer {
   font: 400 11.5px/1.6 var(--mono);
   color: var(--ink-faint);
 }
+.plain-eq { background: rgba(148,105,12,0.07); border-left: 3px solid var(--gold); border-radius: 4px;
+  padding: 9px 12px; margin: 10px 0; font-family: var(--sans); font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+.plain-eq .tag { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
 </style>
 </head>
 <body>
@@ -658,6 +662,8 @@ footer {
         </div>
         <div class="card" id="elo-live" hidden>
           <h3 class="card-title">Live Elo update</h3>
+          <div class="plain-eq"><span class="tag">The rule</span>
+          new rating = old rating + 32 &times; (result &minus; expected chance). Upsets pay more; the winner's gain equals the loser's loss.</div>
           <p class="section-note" id="elo-live-body"></p>
         </div>
       </section>
@@ -728,8 +734,12 @@ footer {
         <p class="fine" id="fact-formula"></p>
         <div class="eqlabel">The object</div>
         <div class="formula" id="fact-union"></div>
+        <div class="plain-eq"><span class="tag">In English</span>
+        total matches = players &times; (players &minus; 1) &divide; 2, and the schedule splits them into rounds where every matchup appears exactly once and nobody plays twice in the same round.</div>
         <div class="eqlabel">Why every pair meets exactly once, in two steps</div>
         <div class="formula" id="proof-steps"></div>
+        <div class="plain-eq"><span class="tag">In English</span>
+        seat i + seat j = &minus;2 &times; round number, working mod players &minus; 1. Each pair of seats has one fixed sum, and the rounds sweep every possible sum exactly once, so every pair meets exactly once.</div>
         <p class="fine">Number the ring vertices 1 to n-1 in entry order around the fixed vertex. Step (1) is
         read off the seating geometry: opposite seats have constant position sum, and each rotation shifts
         every position by one, so the sum class the round selects moves by -2. Step (2) is the arithmetic
@@ -743,6 +753,9 @@ footer {
         <h3>Elo expectation and update</h3>
         <div class="eqlabel">Rating update</div>
         <div class="formula">E_A = 1 / (1 + 10^((R_B - R_A) / 400))<br>R_new = R_old + K (S - E),&nbsp;&nbsp;K = 32,&nbsp;&nbsp;S = 1 win, 0 loss</div>
+        <div class="plain-eq"><span class="tag">In English</span>
+        chance A wins = 1 &divide; (1 + 10 ^ (rating gap &divide; 400)), where the gap is B's rating minus A's rating. Chance B wins = 1 &minus; chance A wins.<br>
+        new rating = old rating + 32 &times; (result &minus; expected chance), where result is 1 for a win and 0 for a loss. Upsets pay more; the winner's gain equals the loser's loss.</div>
         <div class="eqlabel">Race calibration</div>
         <div class="formula" id="race-calibration"></div>
         <p id="elo-example"></p>
@@ -779,6 +792,8 @@ footer {
         <p id="seed-explain"></p>
         <div class="eqlabel">Placement recurrence</div>
         <div class="formula" id="seed-recurrence"></div>
+        <div class="plain-eq"><span class="tag">In English</span>
+        pair every seed with its mirror: seed s plays seed (bracket size + 1 &minus; s), so the best opens against the weakest and seeds 1 and 2 can only meet in the final. Single elimination is players &minus; 1 matches; double elimination is 2 &times; (players &minus; 1), plus one more if the grand final resets.</div>
       </div>
 
       </div>
@@ -793,12 +808,14 @@ footer {
             squares of its entries. A balanced schedule spreads the handoffs so every off-diagonal entry is 1,
             reaching the minimum n(n-1).</p>
             <p>The circle method does the opposite: it attains the <strong>maximum</strong> possible carry-over
-            value, and every schedule with maximum carry-over arises from the circle method. The heatmap is this
+            value, a 2018 theorem. The heatmap is this
             field's matrix, and the value is computed live below. For a student union tournament the trade for
             simplicity is acceptable, but fairer constructions exist, such as Russell's designs, balanced
             whenever n is a power of two.</p>
             <div class="eqlabel">Imbalance value, this schedule</div>
             <div class="formula" id="carry-value"></div>
+            <div class="plain-eq"><span class="tag">In English</span>
+            imbalance = add up (every handoff count) squared. The fairest possible score is players &times; (players &minus; 1); this schedule is provably the worst by this measure, and it is shown on purpose.</div>
           </div>
           <div class="carry-viz">
             <div id="carry-heatmap"></div>
