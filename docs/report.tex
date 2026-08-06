@@ -235,7 +235,9 @@ So the stronger player takes the match about $70\%$ of the time while winning on
 about $59\%$ of individual racks: a clear favorite, but with close racks and the
 occasional upset, which is what real pool looks like. Had the raw $E_A = 0.703$ been
 used as the rack probability, the match win chance would have inflated well past
-$0.85$, punishing the underdog far more than the ratings justify.
+$0.85$, punishing the underdog far more than the ratings justify. During a run the
+application shows this arithmetic live: each finished match prints its expectation
+and its $K(S-E)$ transfer with the real ratings, next to the standings as they move.
 
 \section{The knockout: single and double elimination}
 
@@ -488,6 +490,16 @@ the losers champion takes the first grand final game, and the reset game decides
 the title, $15 = 2k-1$ matches in all. Fields up to thirty players keep every
 guarantee: at $n=30$ the group stage is $29$ rounds and $435$ matches, all five
 checks pass, and Elo is conserved.
+
+The model also grounds the schedule in real time on real tables. Reading the
+winner's score as exactly $N$ racks and the loser's as averaging $(N-1)/2$, a race
+to $5$ runs about $7$ racks. At roughly eight minutes a rack on the Student Union's
+six tables, with rounds played in waves when matches outnumber tables, the eight
+player group stage comes to about six and a half hours of play, while the thirty
+player field needs over eighty hours. The application displays this estimate beside
+each schedule, which makes the practical scale of a live event visible: one long
+evening fits a small field, and the thirty player tournaments in this report are
+exactly the ones that can only be explored by simulation.
 
 \begin{figure}[h]
 \centering
