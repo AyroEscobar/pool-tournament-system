@@ -49,6 +49,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="eq"><span class="var">E<sub>A</sub></span> =
   <span class="frac"><span class="top">1</span><span class="bot">1 + 10<sup>(<span class="var">R<sub>B</sub></span> &minus; <span class="var">R<sub>A</sub></span>) / 400</sup></span></span>
 </div>
+<p class="row"><b class="k">Read it aloud:</b> "E of A equals one, divided by one plus ten, raised to the power of R B minus R A, over four hundred."</p>
 <p class="row"><b class="k">Say it:</b> "The chance A beats B depends only on the rating gap. Every 400 points of gap makes you 10 times more likely to win. Equal ratings give exactly one half."</p>
 <p class="row"><b class="k">On screen:</b> the Live Elo update card under Standings prints this with real ratings after every match.</p>
 <p class="row"><b class="k">Real numbers:</b> 1650 vs 1500: E = 1 / (1 + 10<sup>(1500 &minus; 1650)/400</sup>) = 1 / (1 + 10<sup>&minus;0.375</sup>) = <b>0.703</b>. The stronger player should win about 70% of matches.</p>
@@ -57,6 +58,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 2</span> <b>Elo update</b> <span class="code">eloDelta</span>
 <div class="eq"><span class="var">R&prime;</span> = <span class="var">R</span> + <span class="var">K</span>(<span class="var">S</span> &minus; <span class="var">E</span>), &nbsp; <span class="var">K</span> = 32, &nbsp; <span class="var">S</span> &isin; {0, 1}</div>
+<p class="row"><b class="k">Read it aloud:</b> "R new equals R old, plus K times S minus E. K is thirty two, and S is one for a win, zero for a loss."</p>
 <p class="row"><b class="k">Say it:</b> "You gain or lose K times how surprising the result was. S is 1 for a win, 0 for a loss. The winner's gain equals the loser's loss, so rating points are conserved, the system only moves points, never creates them."</p>
 <p class="row"><b class="k">On screen:</b> the second line of the Live Elo card, and the green and red deltas beside the Elo column in Standings.</p>
 <p class="row"><b class="k">Real numbers:</b> in my test run Omar (E = 0.389, the underdog) beat Marcus: &Delta;R = 32 &times; (1 &minus; 0.389) = <b>+19.6</b>. A favorite winning the same match would only get 32 &times; (1 &minus; 0.611) = +12.4. Upsets pay more. That is the whole matchmaking philosophy: beginners and pros both get fair, informative games.</p>
@@ -69,6 +71,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
   C(<span class="var">N</span>&minus;1+<span class="var">k</span>, <span class="var">k</span>) &nbsp;
   <span class="var">q</span><sup><span class="var">N</span></sup> (1&minus;<span class="var">q</span>)<sup><span class="var">k</span></sup>
 </div>
+<p class="row"><b class="k">Read it aloud:</b> "P of N and q equals the sum, for k from zero to N minus one, of N minus one plus k choose k, times q to the N, times one minus q to the k."</p>
 <p class="row"><b class="k">Say it:</b> "A match is a race to N racks, first to 5, the final to 7. If each rack is a coin with probability q, this sums over every way to win: you take N racks while your opponent takes k, fewer than N, and the last rack is always yours. The catch: a long race amplifies a small edge. So I do NOT plug the Elo expectation in as q. I go backwards: bisection finds the q whose match odds equal the Elo odds exactly."</p>
 <p class="row"><b class="k">On screen:</b> the Elo panel in the sidebar, and every scoreline the simulation produces.</p>
 <p class="row"><b class="k">Real numbers:</b> for E = 0.703, bisection gives q = <b>0.586</b>. Check: P(5, 0.586) = 0.703 exactly. If I had lazily used q = 0.703, the match odds would inflate to <b>0.905</b>, punishing the underdog far beyond what the ratings say. So the favorite wins 70% of matches while winning only 59% of racks: realistic pool, close racks, occasional upsets.</p>
@@ -83,6 +86,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
   <span class="sum"><span class="sig">&Sigma;</span><span class="lim"><span class="var">v</span></span></span> deg(<span class="var">v</span>) =
   <span class="frac"><span class="top"><span class="var">n</span>(<span class="var">n</span>&minus;1)</span><span class="bot">2</span></span>
 </div>
+<p class="row"><b class="k">Read it aloud:</b> "The number of edges of K n equals one half the sum of all the vertex degrees, which comes out to n times n minus one, over two."</p>
 <p class="row"><b class="k">Say it:</b> "Model players as vertices, matches as edges: everyone plays everyone means the complete graph. Each of the n players has n minus 1 opponents, and dividing by two because each match is counted from both ends gives n times n minus 1 over 2."</p>
 <p class="row"><b class="k">On screen:</b> the Group Stage note ("28 matches in total") and verification check five.</p>
 <p class="row"><b class="k">Real numbers:</b> n = 8: 8 &times; 7 / 2 = <b>28</b>. n = 30: 30 &times; 29 / 2 = <b>435</b>.</p>
@@ -92,6 +96,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <span class="lbl">Equation 5</span> <b>Real event duration</b> <span class="code">expectedRacks, estimateEventMinutes</span>
 <div class="eq">racks &asymp; <span class="var">N</span> + <span class="frac"><span class="top"><span class="var">N</span>&minus;1</span><span class="bot">2</span></span>,
   &nbsp;&nbsp; time = rounds &times; &lceil;<span class="frac"><span class="top">matches per round</span><span class="bot">tables</span></span>&rceil; &times; racks &times; minutes per rack</div>
+<p class="row"><b class="k">Read it aloud:</b> "Racks is about N plus half of N minus one. Time equals rounds, times matches per round over tables rounded up, times racks per match, times minutes per rack."</p>
 <p class="row"><b class="k">Say it:</b> "The winner of a race to 5 plays exactly 5 racks; the loser averages about 2. So about 7 racks, roughly 56 minutes at 8 minutes a rack. Rounds run one after another, and inside a round the matches share the Union's six tables in waves."</p>
 <p class="row"><b class="k">On screen:</b> the sentence at the end of the Group Stage note.</p>
 <p class="row"><b class="k">Real numbers:</b> 8 players: 7 rounds &times; 1 wave &times; 56 min = 392 min &asymp; <b>6.5 hours</b>. 30 players: 29 rounds &times; 3 waves &times; 56 min = 4872 min &asymp; <b>81 hours</b>. Your line: "small fields fit an evening, big fields are simulation territory."</p>
@@ -102,6 +107,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 6</span> <b>A schedule is a one-factorization</b>
 <div class="eq"><span class="var">E</span>(<span class="var">K<sub>n</sub></span>) = <span class="var">M</span><sub>1</sub> &cup; <span class="var">M</span><sub>2</sub> &cup; &hellip; &cup; <span class="var">M</span><sub><span class="var">n</span>&minus;1</sub></div>
+<p class="row"><b class="k">Read it aloud:</b> "The edge set of K n splits into M one through M n minus one: disjoint perfect matchings, one per round."</p>
 <p class="row"><b class="k">Say it:</b> "One round is played simultaneously, so nobody appears twice: that is a perfect matching of the graph. A full schedule chops ALL the edges into perfect matchings, one per round. That partition is called a one-factorization. So scheduling a fair round robin IS one-factorizing the complete graph."</p>
 <p class="row"><b class="k">On screen:</b> walkthrough Act 1, the K<sub>6</sub> diagram inking one matching per rotation.</p>
 <p class="row"><b class="k">Real numbers:</b> K<sub>6</sub> has 15 edges, 5 rounds of 3 matches: 5 &times; 3 = 15, every edge used exactly once.</p>
@@ -110,6 +116,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card" style="border-color:var(--brass); border-width:1.5px;">
 <span class="lbl">Equation 7</span> <b>THE proof (own this one)</b> <span class="code">buildSchedule + the congruence test</span>
 <div class="eq"><span class="var">i</span> + <span class="var">j</span> &equiv; &minus;2<span class="var">r</span> (mod <span class="var">n</span>&minus;1)</div>
+<p class="row"><b class="k">Read it aloud:</b> "i plus j is congruent to minus two r, mod n minus one."</p>
 <p class="row"><b class="k">Say it, four sentences, unaided:</b> "Fix one player, put the other n minus 1 on a ring, pair across the ring, rotate one seat per round. Opposite seats have a constant position sum, and each rotation shifts that sum by minus 2, so players i and j meet in round r exactly when i plus j is congruent to minus 2r. Because n is even, n minus 1 is odd, so 2 is invertible mod n minus 1, and r maps to minus 2r hits every residue class exactly once. Each pair has one fixed sum, so each pair meets in exactly one round."</p>
 <p class="row"><b class="k">On screen:</b> the congruence table in the walkthrough, generated live from the shipped scheduler.</p>
 <p class="row"><b class="k">Real numbers</b> (n = 6, ring players 1 to 5, fixed player 0):</p>
@@ -127,6 +134,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 8</span> <b>Chromatic index (why odd fields need byes)</b>
 <div class="eq">&chi;&prime;(<span class="var">K<sub>n</sub></span>) = <span class="var">n</span>&minus;1 &nbsp;(<span class="var">n</span> even), &nbsp;&nbsp; <span class="var">n</span> &nbsp;(<span class="var">n</span> odd)</div>
+<p class="row"><b class="k">Read it aloud:</b> "The chromatic index of K n is n minus one when n is even, and n when n is odd."</p>
 <p class="row"><b class="k">Say it:</b> "A schedule is an edge coloring, one color per round. Even fields color perfectly in n minus 1 rounds. Odd fields need n rounds and every round leaves exactly one player uncolored: that is the graph theory reason byes exist. The app adds a phantom seat, so each player rests exactly once."</p>
 <p class="row"><b class="k">On screen:</b> generate the 13 player example: "13 players with a rotating bye: 13 rounds."</p>
 </div>
@@ -136,6 +144,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 9</span> <b>Seeding recurrence</b> <span class="code">seedOrder, seedMeetRound</span>
 <div class="eq"><span class="var">S</span>(1) = [1], &nbsp; <span class="var">S</span>(2<span class="var">k</span>) = [<span class="var">s</span>, &nbsp;2<span class="var">k</span>+1&minus;<span class="var">s</span> &nbsp;for each <span class="var">s</span> &isin; <span class="var">S</span>(<span class="var">k</span>)]</div>
+<p class="row"><b class="k">Read it aloud:</b> "S of one is just seed one. To double the bracket, each seed s gets paired with its mirror, two k plus one minus s."</p>
 <p class="row"><b class="k">Say it:</b> "Double the bracket by pairing every seed s with its mirror 2k plus 1 minus s. So S(8) is 1, 8, 4, 5, 2, 7, 3, 6: every first round pair sums to 9, strongest against weakest. The payoff is the subtree isolation lemma: the top 2 to the t seeds land in 2 to the t different subtrees, and two players can only meet at the root of the smallest subtree containing both. That is why seeds 1 and 2 can only ever meet in the final."</p>
 <p class="row"><b class="k">On screen:</b> walkthrough Act 3 builds the seed order pass by pass and highlights the meeting round on the tree.</p>
 </div>
@@ -143,6 +152,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 10</span> <b>Match counts by loss counting</b> <span class="code">buildBracket, buildDoubleBracket</span>
 <div class="eq">single: <span class="var">k</span>&minus;1, &nbsp;&nbsp; double: 2(<span class="var">k</span>&minus;1) + {0 or 1} = 2<span class="var">k</span>&minus;2 &nbsp;or&nbsp; 2<span class="var">k</span>&minus;1</div>
+<p class="row"><b class="k">Read it aloud:</b> "Single elimination is k minus one matches. Double elimination is two times k minus one, plus zero or one: so two k minus two, or two k minus one when the grand final resets."</p>
 <p class="row"><b class="k">Say it:</b> "Count losses, not matches, every match creates exactly one loss. Single elimination: k minus 1 players must be eliminated once, so k minus 1 matches. Double elimination: every non champion exits with exactly two losses, that is 2k minus 2, plus one more game if the losers champion wins the first grand final and forces the reset."</p>
 <p class="row"><b class="k">On screen:</b> the live double elimination run; if the grand final resets you get the 2k minus 1 case live.</p>
 <p class="row"><b class="k">Real numbers:</b> k = 8: single is 7 matches, double is <b>14 or 15</b> (7 winners bracket + 6 losers bracket + grand final, + reset).</p>
@@ -153,6 +163,7 @@ Each one: the equation, how to say it, where it is on screen, and the real numbe
 <div class="card">
 <span class="lbl">Equation 11</span> <b>Carry-over imbalance</b> <span class="code">carryOverMatrix, carryOverValue</span>
 <div class="eq">&Gamma; = <span class="sum"><span class="sig">&Sigma;</span><span class="lim"><span class="var">j</span>,<span class="var">k</span></span></span> <span class="var">G</span>[<span class="var">j</span>][<span class="var">k</span>]<sup>2</sup>, &nbsp;&nbsp; balanced minimum = <span class="var">n</span>(<span class="var">n</span>&minus;1)</div>
+<p class="row"><b class="k">Read it aloud:</b> "Gamma equals the sum, over all pairs j and k, of G at j k squared. The balanced minimum is n times n minus one."</p>
 <p class="row"><b class="k">Say it:</b> "If I play you right after playing someone strong, you inherit my fatigue, that is a carry-over. G counts every such handoff, and the sum of squares measures how unevenly they pile up. A 2018 theorem proves my own circle method is the WORST possible schedule by this measure. I show that on purpose: the method that gives the one line correctness proof costs you carry-over balance, and stating the tradeoff honestly is part of the design."</p>
 <p class="row"><b class="k">On screen:</b> the heatmap in the walkthrough coda, computed live for the current field.</p>
 <p class="row"><b class="k">Real numbers:</b> K<sub>6</sub>: circle method &Gamma; = <b>60</b>, balanced minimum 6 &times; 5 = <b>30</b>, exactly twice as bad. Balanced schedules exist when n is a power of two (Russell 1980).</p>
